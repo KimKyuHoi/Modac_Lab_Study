@@ -1,5 +1,5 @@
 import { App as AntApp, Button } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { askCodingAssistant, askStakeholder } from "../ai";
 import { ChatPanel } from "../components/ChatPanel";
@@ -157,8 +157,19 @@ function WorkInner() {
               <span className="muted" style={{ fontSize: 12, display: "block", marginBottom: 2 }}>마케팅팀 담당자</span>
               {task.requirementMessage}
             </blockquote>
+            <details open style={{ marginBottom: 8 }}>
+              <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>서비스 기본 정보</summary>
+              <dl style={{ margin: "6px 0 0", display: "grid", gridTemplateColumns: "84px 1fr", rowGap: 4, columnGap: 10, fontSize: 13 }}>
+                {task.serviceProfile.map((p) => (
+                  <Fragment key={p.label}>
+                    <dt className="muted" style={{ fontWeight: 400 }}>{p.label}</dt>
+                    <dd style={{ margin: 0 }}>{p.value}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            </details>
             <p className="muted" style={{ fontSize: 13 }}>
-              {task.starterNote} 이 메시지만으로는 정해지지 않은 게 많아요. 실무진에게 물어보고, 안 정해진 건 직접 정하세요.
+              {task.starterNote} 기능 세부는 정해지지 않은 게 많아요. 실무진에게 물어보고, 안 정해진 건 직접 정하세요.
             </p>
           </div>
           <ChatPanel

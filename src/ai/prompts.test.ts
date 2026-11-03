@@ -54,3 +54,9 @@ test("reportPrompt includes competency definitions, checklist and ref ids", () =
   for (const c of bannerScheduleTask.checklist) expect(user).toContain(c);
   expect(user).not.toContain("정의서");
 });
+
+test("stakeholderSystem marks the service profile as already public to the candidate", () => {
+  const sys = stakeholderSystem(bannerScheduleTask);
+  expect(sys).toContain("이미 공개된 서비스 정보");
+  for (const p of bannerScheduleTask.serviceProfile) expect(sys).toContain(p.value);
+});

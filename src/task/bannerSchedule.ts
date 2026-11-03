@@ -5,6 +5,9 @@ export type Task = {
   title: string;
   requirementMessage: string;
   starterNote: string;
+  /** 지원자에게 처음부터 공개되는 서비스 기본 스펙 */
+  serviceProfile: { label: string; value: string }[];
+  /** 실무진에게 물어야 알 수 있는 사실표 */
   facts: string[];
   personaRules: string[];
   extensionScenario: string;
@@ -20,15 +23,25 @@ export const bannerScheduleTask: Task = {
     "안녕하세요! 배너를 나라별로 다르게 보여 주고 싶은데요, 미리 예약해 두면 알아서 바뀌면 좋겠어요. 운영 화면에서 저희가 직접 넣고 고칠 수 있게요. 다음 캠페인 전에 될까요?",
   starterNote:
     "키즈 콘텐츠 서비스의 웹 홈 화면 일부와 운영자용 배너 관리 화면입니다. 홈 상단 한 자리에 배너 하나를 보여 줍니다. 데이터는 src/api/banners.js의 가짜 API에서 옵니다.",
+  serviceProfile: [
+    { label: "서비스", value: "글로벌 키즈 콘텐츠 웹 서비스. 홈 상단 배너 한 자리에서 캠페인을 안내한다." },
+    { label: "운영 기간", value: "2019년 출시, 7년째 운영 중" },
+    { label: "월간 사용자", value: "약 120만 명 (한국 60%, 일본 25%, 미국 15%)" },
+    { label: "트래픽", value: "홈 조회 일 평균 약 35만 회. 캠페인 시즌 피크는 평시의 3배" },
+    { label: "기기", value: "모바일 웹 80%, 데스크톱 20%. 홈 첫 화면 로딩 속도를 중요하게 본다" },
+    { label: "사용자 국가", value: "로그인 사용자는 설정 국가, 비로그인(약 40%)은 브라우저 언어로 추정. 코드의 getUserCountry()가 이 값을 준다" },
+    { label: "운영 팀", value: "마케팅 운영자 3명. 평소 하루 2~3건, 캠페인 시즌엔 하루 10건 정도 배너를 바꾼다" },
+    { label: "기술 스택", value: "프론트 React 18 + Vite, 상태는 서버 데이터 기준. API는 Node(Express) REST, /api/banners. 서버 변경은 백엔드팀 요청이 필요하고 보통 2주 걸린다" },
+    { label: "인프라", value: "AWS. 프론트는 S3 정적 호스팅 + CloudFront CDN(캐시 TTL 10분). API는 ECS Fargate 2태스크, DB는 RDS MySQL 8, 캐시는 ElastiCache Redis(배너 목록 60초 캐시)" },
+    { label: "배포", value: "GitHub Actions. PR 머지 시 stage 자동 배포, prod는 매일 오후 3시 수동 승인 배포. 환경은 dev / stage / prod 3개, 설정은 환경변수(.env.*)로 분리" },
+    { label: "CI/CD", value: "PR마다 lint, 타입 체크, Vitest 단위 테스트, Playwright 스모크 3개 실행. 실패 시 머지 불가" },
+    { label: "모니터링", value: "Datadog APM + 브라우저 RUM, Sentry 에러 수집. 홈 LCP 2.5초 초과 시 알림" },
+    { label: "현재 배너", value: "국가 구분 없이 슬롯 1개, 등록된 첫 배너를 보여 준다" },
+    { label: "일정", value: "다음 캠페인은 2주 뒤 시작" },
+  ],
   facts: [
-    // 서비스 맥락
-    "월간 사용자 약 120만 명. 한국 60%, 일본 25%, 미국 15%.",
-    "모바일 웹이 80%. 홈 첫 화면 로딩 속도를 중요하게 본다.",
-    "국가는 로그인 사용자의 설정 국가를 쓰고, 비로그인은 브라우저 언어로 추정한다. 현재 코드에 getUserCountry()가 이미 있다.",
-    "기존 스택은 React, REST API. 서버 쪽 변경은 백엔드팀에 요청해야 하고 보통 2주 걸린다. 이번 건은 프론트에서 먼저 풀길 바란다.",
-    "다음 캠페인은 2주 뒤 시작한다.",
-    // 운영 맥락
-    "마케팅팀 운영자 3명. 평소 하루 2~3건, 캠페인 시즌엔 하루 10건 정도 배너를 바꾼다.",
+    // 서비스 기본 스펙은 serviceProfile로 공개돼 있다. 여기는 물어봐야 나오는 것만.
+    "이번 건은 프론트에서 먼저 풀길 바란다. 서버 변경은 다음 단계에서 검토한다.",
     "운영자 둘이 같은 배너를 동시에 고치는 일이 가끔 있다. 어떻게 할지는 정하지 않았다.",
     // 기능 세부
     "국가는 KR, JP, US로 시작하고 나중에 늘어난다.",

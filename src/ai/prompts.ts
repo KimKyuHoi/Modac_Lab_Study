@@ -11,6 +11,9 @@ export function stakeholderSystem(task: Task): string {
     "처음에 지원자에게 보낸 메시지:",
     `"${task.requirementMessage}"`,
     "",
+    "지원자에게 이미 공개된 서비스 정보 (화면에 보이므로 물어보면 짧게 확인만 해 준다):",
+    ...task.serviceProfile.map((p) => `- ${p.label}: ${p.value}`),
+    "",
     "당신만 아는 사실표 (지원자가 물어보면 답하고, 안 물어보면 절대 먼저 말하지 않는다):",
     ...task.facts.map((f) => `- ${f}`),
     "",
@@ -99,6 +102,7 @@ export function designQuestionsPrompt(s: Session, task: Task): { system: string;
   const user = [
     `과제: ${task.title}`,
     `요구사항 원문: ${task.requirementMessage}`,
+    "공개된 서비스 정보: " + task.serviceProfile.map((p) => `${p.label} ${p.value}`).join(" / "),
     "",
     "실무진 Q&A (지원자가 요구사항을 구체화하려고 물은 것):",
     renderQa(s),
@@ -166,6 +170,7 @@ export function reportPrompt(s: Session, task: Task): { system: string; user: st
   const user = [
     `과제: ${task.title}`,
     `요구사항 원문: ${task.requirementMessage}`,
+    "공개된 서비스 정보: " + task.serviceProfile.map((p) => `${p.label} ${p.value}`).join(" / "),
     "",
     "체크리스트:",
     ...task.checklist.map((c, i) => `${i + 1}. ${c}`),
