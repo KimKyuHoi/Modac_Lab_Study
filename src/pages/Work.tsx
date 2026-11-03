@@ -1,4 +1,4 @@
-import { App as AntApp, Button, Tabs } from "antd";
+import { App as AntApp, Button } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { askCodingAssistant, askStakeholder } from "../ai";
@@ -6,9 +6,9 @@ import { ChatPanel } from "../components/ChatPanel";
 import { PhaseGuard } from "../components/PhaseGuard";
 import { PhaseTimer } from "../components/PhaseTimer";
 import { QuestionBudget } from "../components/QuestionBudget";
+import { ResizeHandle } from "../components/ResizeHandle";
 import { SandpackWorkbench } from "../components/SandpackWorkbench";
 import { Shell } from "../components/Shell";
-import { SPEC_MIN_CHARS, SpecEditor } from "../components/SpecEditor";
 import { candidateFiles } from "../session/files";
 import { remainingQuestions } from "../session/reducer";
 import { useSession } from "../session/store";
@@ -16,11 +16,26 @@ import { bannerScheduleTask as task } from "../task/bannerSchedule";
 import { visibleStarterFiles } from "../task/starterFiles";
 
 const SNAPSHOT_MS = 2 * 60 * 1000;
+const WIDTH_KEY = "work:widths";
+const MIN = 260;
 
 function lineCounts(files: Record<string, string>): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [p, c] of Object.entries(candidateFiles(files))) out[p] = c.split("\n").length;
   return out;
+}
+
+function loadWidths(): { left: number; right: number } {
+  try {
+    const raw = localStorage.getItem(WIDTH_KEY);
+    if (raw) {
+      const v = JSON.parse(raw);
+      if (typeof v.left === "number" && typeof v.right === "number") return v;
+    }
+  } catch {
+    /* 기본값 */
+  }
+  return { left: 400, right: 360 };
 }
 
 function WorkInner() {
@@ -30,9 +45,20 @@ function WorkInner() {
   const s = session!;
   const [askPending, setAskPending] = useState(false);
   const [helpPending, setHelpPending] = useState(false);
-  const [leftTab, setLeftTab] = useState("ask");
+  const [widths, setWidths] = useState(loadWidths);
   const remaining = remainingQuestions(s);
-  const specOk = s.clarify.spec.text.trim().length >= SPEC_MIN_CHARS;
+
+  const resize = (side: "left" | "right", dx: number) =>
+    setWidths((w) => {
+      const maxSide = Math.max(MIN, window.innerWidth - MIN - 480 - (side === "left" ? w.right : w.left));
+      const next = { ...w, [side]: Math.min(maxSide, Math.max(MIN, w[side] + (side === "left" ? dx : -dx))) };
+      try {
+        localStorage.setItem(WIDTH_KEY, JSON.stringify(next));
+      } catch {
+        /* noop */
+      }
+      return next;
+    });
 
   // 세션 파일은 /src/ 만 저장되므로 템플릿 진입 파일(/index.js)은 항상 시작 코드에서 보탠다.
   const [initialFiles] = useState(() => (Object.keys(s.build.files).length > 0 ? { ...task.starterFiles, ...s.build.files } : task.starterFiles));
@@ -85,14 +111,9 @@ function WorkInner() {
   };
 
   const submit = () => {
-    if (!specOk) {
-      setLeftTab("spec");
-      message.warning(`제출하려면 정의서를 ${SPEC_MIN_CHARS}자 이상 적어야 해요. 무엇을 어떻게 정했는지와 이유를 남겨 주세요.`);
-      return;
-    }
     modal.confirm({
-      title: "코드와 정의서를 제출할까요?",
-      content: `제출하면 코드와 정의서를 더 고칠 수 없고, 실무진에게 더 질문할 수 없어요. 바로 이어서 이 코드에 대한 설계 질문 세 가지에 답하게 됩니다.${remaining > 0 ? ` 남은 질문 ${remaining}번은 사라집니다.` : ""}`,
+      title: "코드를 제출할까요?",
+      content: `제출하면 코드를 더 고칠 수 없고, 실무진에게 더 질문할 수 없어요. 바로 이어서 AI가 당신의 기록과 코드를 읽고 만든 질문 세 가지에 답하게 됩니다.${remaining > 0 ? ` 남은 질문 ${remaining}번은 사라집니다.` : ""}`,
       okText: "제출",
       cancelText: "더 만들기",
       onOk: async () => {
@@ -125,64 +146,39 @@ function WorkInner() {
         </>
       }
     >
-      <div style={{ display: "grid", gridTemplateColumns: "400px minmax(0, 1fr) 360px", height: "calc(100vh - 52px)" }}>
-        <aside style={{ display: "flex", flexDirection: "column", minHeight: 0, borderRight: "1px solid var(--line)" }} className="rail-left">
-          <div style={{ padding: "12px 20px 0" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
+      <div style={{ display: "flex", height: "calc(100vh - 52px)", minWidth: 0 }}>
+        <aside style={{ width: widths.left, flexShrink: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <div style={{ padding: "12px 20px 10px", borderBottom: "1px solid var(--line)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
               <h3 style={{ fontSize: 15 }}>{task.title}</h3>
               <QuestionBudget total={s.clarify.questionLimit} used={s.clarify.qa.length} />
             </div>
-            <blockquote className="prose" style={{ margin: "0 0 4px", padding: "10px 12px", background: "var(--frost)", borderRadius: 4, fontSize: 14, lineHeight: 1.6 }}>
+            <blockquote className="prose" style={{ margin: "0 0 8px", padding: "10px 12px", background: "var(--frost)", borderRadius: 4, fontSize: 14, lineHeight: 1.6 }}>
               <span className="muted" style={{ fontSize: 12, display: "block", marginBottom: 2 }}>마케팅팀 담당자</span>
               {task.requirementMessage}
             </blockquote>
+            <p className="muted" style={{ fontSize: 13 }}>
+              {task.starterNote} 이 메시지만으로는 정해지지 않은 게 많아요. 실무진에게 물어보고, 안 정해진 건 직접 정하세요.
+            </p>
           </div>
-          <Tabs
-            activeKey={leftTab}
-            onChange={setLeftTab}
-            style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-            tabBarStyle={{ margin: 0, padding: "0 20px" }}
-            items={[
-              {
-                key: "ask",
-                label: "실무진 질문",
-                children: (
-                  <ChatPanel
-                    turns={qaTurns}
-                    onSend={ask}
-                    pending={askPending}
-                    pendingText="실무진이 답하고 있어요"
-                    disabled={remaining === 0}
-                    disabledText="질문을 다 썼어요. 나머지는 직접 정해서 정의서에 적으세요."
-                    placeholder="콕 집어 물어보세요. 예: 겹치는 예약은 어떻게 할까요?"
-                    emptyText="아직 질문하지 않았어요. 이 메시지만으로는 정해지지 않은 게 많아요. 서비스 규모, 사용 환경, 기한, 세부 동작 모두 물어볼 수 있어요."
-                    modelLabel="실무진"
-                  />
-                ),
-              },
-              {
-                key: "spec",
-                label: specOk ? "정의서" : "정의서 (미작성)",
-                children: (
-                  <div style={{ padding: "12px 20px", overflowY: "auto", height: "100%" }}>
-                    <p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
-                      무엇을 만들지, 정해지지 않은 것을 어떻게 정했는지와 이유를 적으세요. 제출 뒤 이 결정들에 대해 질문을 받습니다. 제출 전까지 고칠 수 있어요.
-                    </p>
-                    <SpecEditor value={s.clarify.spec.text} onChange={(t) => dispatch({ type: "spec/edit", text: t })} locked={false} />
-                    <h3 style={{ margin: "20px 0 6px", fontSize: 14 }}>시작 코드</h3>
-                    <p className="muted" style={{ fontSize: 13 }}>{task.starterNote}</p>
-                  </div>
-                ),
-              },
-            ]}
+          <ChatPanel
+            turns={qaTurns}
+            onSend={ask}
+            pending={askPending}
+            pendingText="실무진이 답하고 있어요"
+            disabled={remaining === 0}
+            disabledText="질문을 다 썼어요. 나머지는 직접 정하세요."
+            placeholder="실무진에게 콕 집어 물어보세요. 예: 겹치는 예약은 어떻게 할까요?"
+            emptyText="아직 질문하지 않았어요. 서비스 규모, 사용 환경, 기한, 세부 동작 모두 물어볼 수 있어요."
+            modelLabel="실무진"
           />
         </aside>
-
-        <div style={{ minWidth: 0, minHeight: 0 }}>
+        <ResizeHandle label="왼쪽 패널 폭" onDelta={(dx) => resize("left", dx)} />
+        <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
           <SandpackWorkbench files={initialFiles} visibleFiles={visibleStarterFiles} activeFile="/src/Home.jsx" onFilesChange={onFilesChange} />
         </div>
-
-        <aside className="rail" style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <ResizeHandle label="오른쪽 패널 폭" onDelta={(dx) => resize("right", dx)} />
+        <aside style={{ width: widths.right, flexShrink: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--line)" }}>
             <h3>AI 코딩 도우미</h3>
           </div>
@@ -192,7 +188,7 @@ function WorkInner() {
             pending={helpPending}
             pendingText="도우미가 코드를 읽고 있어요"
             placeholder="현재 파일을 보고 답합니다. 대화는 기록돼요."
-            emptyText="필요하면 도우미에게 맡기세요. 무엇을 맡기고 무엇을 직접 확인했는지가 기록에 남습니다."
+            emptyText="필요하면 도우미에게 맡기세요. 무엇을 맡기고 무엇을 직접 확인했는지가 기록에 남고, 제출 뒤 그걸로 질문을 받습니다."
             modelLabel="도우미"
           />
         </aside>

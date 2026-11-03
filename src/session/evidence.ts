@@ -76,7 +76,7 @@ export function filterExisting(s: Session, refs: string[]): string[] {
 
 /** 프롬프트에 "쓸 수 있는 근거 id"로 넘기는 목록. 코드는 파일별 줄 범위 형식만 알려 준다. */
 export function listRefIds(s: Session): string[] {
-  const ids: string[] = ["spec"];
+  const ids: string[] = s.clarify.spec.text.trim() ? ["spec"] : [];
   ids.push(...s.clarify.qa.map((q) => q.id));
   ids.push(...s.build.chat.map((c) => c.id));
   ids.push(...s.review.items.map((d) => d.id));

@@ -1,10 +1,10 @@
 import { designQuestionsSchema, followUpSchema, reportSchema } from "./schemas";
 
-test("designQuestionsSchema rejects 1 question and accepts 2", () => {
-  expect(designQuestionsSchema.safeParse({ questions: [{ question: "q", evidence: [] }] }).success).toBe(false);
-  expect(
-    designQuestionsSchema.safeParse({ questions: [{ question: "q1", evidence: ["spec"] }, { question: "q2", evidence: [] }] }).success,
-  ).toBe(true);
+test("designQuestionsSchema requires exactly 3 questions with a kind each", () => {
+  const q = (kind: string) => ({ kind, question: "q", evidence: ["qa-1"] });
+  expect(designQuestionsSchema.safeParse({ questions: [q("design"), q("extend")] }).success).toBe(false);
+  expect(designQuestionsSchema.safeParse({ questions: [q("ai_direction"), q("design"), q("extend")] }).success).toBe(true);
+  expect(designQuestionsSchema.safeParse({ questions: [q("ai_direction"), q("design"), q("nope")] }).success).toBe(false);
 });
 
 test("followUpSchema accepts ambiguous with followUp", () => {
@@ -18,8 +18,10 @@ test("reportSchema requires 5 competencies with scores 1-5 and evidence arrays",
     competencies: ["requirements", "implementation", "ai_usage", "understanding", "extension"].map(comp),
     checklist: [{ item: "a", passed: true, evidence: [] }],
     interviewQuestions: ["q"],
+    highlights: [{ title: "겹침 규칙", detail: "등록일 우선으로 정함", evidence: ["qa-1"] }],
   };
   expect(reportSchema.safeParse(good).success).toBe(true);
+  expect(reportSchema.safeParse({ ...good, highlights: undefined }).success).toBe(false);
   expect(reportSchema.safeParse({ ...good, competencies: good.competencies.slice(0, 4) }).success).toBe(false);
   expect(reportSchema.safeParse({ ...good, competencies: [...good.competencies.slice(0, 4), { ...comp("extension"), draftScore: 6 }] }).success).toBe(false);
 });

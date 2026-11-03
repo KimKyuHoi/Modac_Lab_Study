@@ -8,11 +8,10 @@ import { useSession } from "../session/store";
 import { bannerScheduleTask } from "../task/bannerSchedule";
 
 const STEPS: { name: string; detail: string }[] = [
-  { name: "질문", detail: "마케팅 담당자의 애매한 요청을 읽고, AI 실무진에게 5번까지 물어봅니다. 만드는 중에도 물어볼 수 있어요." },
-  { name: "정의", detail: "무엇을 어떻게 만들지 스스로 정해서 정의서에 적습니다. 정하지 않은 건 당신이 정합니다." },
-  { name: "구현", detail: `같은 화면의 에디터에서 만듭니다. AI 코딩 도우미를 쓸 수 있고 대화는 기록됩니다. 세 단계 합쳐 약 ${bannerScheduleTask.timeBudgetMin.build}분.` },
-  { name: "설계 질의", detail: `제출 직후 AI가 코드에 대해 세 가지를 묻습니다. 약 ${bannerScheduleTask.timeBudgetMin.review}분.` },
-  { name: "리포트", detail: "역량별 점수 초안과 근거가 나옵니다. 최종 판단은 면접관이 합니다." },
+  { name: "질문하며 만들기", detail: `마케팅 담당자의 애매한 요청을 받고, AI 실무진에게 5번까지 물어가며 에디터에서 만듭니다. 정해지지 않은 건 당신이 정합니다. 약 ${bannerScheduleTask.timeBudgetMin.build}분.` },
+  { name: "AI 도우미", detail: "코딩 도우미에게 무엇이든 시킬 수 있어요. 무엇을 시키고 무엇을 직접 확인했는지가 기록됩니다." },
+  { name: "설계 질의", detail: `제출 직후 AI가 당신의 기록과 코드를 읽고 당신에게만 맞는 질문 세 가지를 합니다. 답이 모호하면 꼬리질문. 약 ${bannerScheduleTask.timeBudgetMin.review}분.` },
+  { name: "리포트", detail: "역량별 점수 초안, 근거, 그리고 당신이 특히 고민한 지점이 나옵니다. 최종 판단은 면접관이 합니다." },
 ];
 
 export function StartPage() {

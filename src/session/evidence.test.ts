@@ -11,7 +11,7 @@ function fixture() {
   s = reduce(s, { type: "chat/add", role: "user", text: "필터 짜줘", at: T });
   const code = Array.from({ length: 60 }, (_, i) => `line ${i + 1}`).join("\n");
   s = reduce(s, { type: "files/set", files: { "/src/App.jsx": code } });
-  s = reduce(s, { type: "review/setItems", items: [{ id: "dq-1", kind: "explain", question: "왜?", evidence: [] }] });
+  s = reduce(s, { type: "review/setItems", items: [{ id: "dq-1", kind: "design", question: "왜?", evidence: [] }] });
   return s;
 }
 
@@ -59,8 +59,9 @@ test("filterExisting drops unknown refs and keeps order", () => {
   ]);
 });
 
-test("listRefIds includes spec, qa-*, chat-*, dq-* and file paths", () => {
+test("listRefIds includes qa-*, chat-*, dq-* and file paths, and spec only when written", () => {
   const ids = listRefIds(fixture());
   expect(ids).toEqual(expect.arrayContaining(["spec", "qa-1", "chat-1", "dq-1"]));
+  expect(listRefIds(createSession("b", T))).not.toContain("spec");
   expect(ids.some((i) => i.startsWith("code:src/App.jsx:"))).toBe(true);
 });

@@ -2,10 +2,12 @@ import { z } from "zod";
 
 const COMPETENCY_KEYS = ["requirements", "implementation", "ai_usage", "understanding", "extension"] as const;
 
+const QUESTION_KINDS = ["ai_direction", "design", "extend"] as const;
+
 export const designQuestionsSchema = z.object({
   questions: z
-    .array(z.object({ question: z.string().min(1), evidence: z.array(z.string()) }))
-    .length(2),
+    .array(z.object({ kind: z.enum(QUESTION_KINDS), question: z.string().min(1), evidence: z.array(z.string()) }))
+    .length(3),
 });
 
 export const followUpSchema = z.object({
@@ -27,6 +29,7 @@ export const reportSchema = z
       .length(5),
     checklist: z.array(z.object({ item: z.string(), passed: z.boolean(), evidence: z.array(z.string()) })),
     interviewQuestions: z.array(z.string()),
+    highlights: z.array(z.object({ title: z.string(), detail: z.string(), evidence: z.array(z.string()) })),
   })
   .refine((r) => new Set(r.competencies.map((c) => c.key)).size === 5, { message: "역량 5개가 모두 있어야 해요." });
 
@@ -42,9 +45,13 @@ export const designQuestionsJsonSchema = {
   properties: {
     questions: {
       type: "array",
-      minItems: 2,
-      maxItems: 2,
-      items: { type: "object", properties: { question: { type: "string" }, evidence }, required: ["question", "evidence"] },
+      minItems: 3,
+      maxItems: 3,
+      items: {
+        type: "object",
+        properties: { kind: { type: "string", enum: [...QUESTION_KINDS] }, question: { type: "string" }, evidence },
+        required: ["kind", "question", "evidence"],
+      },
     },
   },
   required: ["questions"],
@@ -79,6 +86,10 @@ export const reportJsonSchema = {
       items: { type: "object", properties: { item: { type: "string" }, passed: { type: "boolean" }, evidence }, required: ["item", "passed", "evidence"] },
     },
     interviewQuestions: { type: "array", items: { type: "string" } },
+    highlights: {
+      type: "array",
+      items: { type: "object", properties: { title: { type: "string" }, detail: { type: "string" }, evidence }, required: ["title", "detail", "evidence"] },
+    },
   },
-  required: ["competencies", "checklist", "interviewQuestions"],
+  required: ["competencies", "checklist", "interviewQuestions", "highlights"],
 };

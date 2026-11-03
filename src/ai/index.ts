@@ -32,14 +32,12 @@ export async function askCodingAssistant(s: Session, files: Record<string, strin
 export async function generateDesignQuestions(task: Task, s: Session): Promise<ReviewItem[]> {
   const { system, user } = designQuestionsPrompt(s, task);
   const out = await callJson(system, [{ role: "user", text: user }], designQuestionsJsonSchema, (raw) => designQuestionsSchema.parse(raw));
-  const items: ReviewItem[] = out.questions.map((q, i) => ({
+  return out.questions.map((q, i) => ({
     id: `dq-${i + 1}`,
-    kind: "explain",
+    kind: q.kind,
     question: q.question,
     evidence: filterExisting(s, q.evidence),
   }));
-  items.push({ id: "dq-3", kind: "extend", question: task.extensionScenario, evidence: [] });
-  return items;
 }
 
 export async function judgeFollowUp(item: ReviewItem, s: Session): Promise<{ ambiguous: boolean; followUp?: string }> {
@@ -57,5 +55,6 @@ export async function generateReport(task: Task, s: Session): Promise<Report> {
     competencies: out.competencies.map((c) => ({ ...c, evidence: filterExisting(s, c.evidence) })),
     checklist: out.checklist.map((c) => ({ ...c, evidence: filterExisting(s, c.evidence) })),
     interviewQuestions: out.interviewQuestions,
+    highlights: out.highlights.map((h) => ({ ...h, evidence: filterExisting(s, h.evidence) })),
   };
 }

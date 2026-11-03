@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { EvidenceChip } from "../components/EvidenceChip";
 import { EvidenceDrawer } from "../components/EvidenceDrawer";
+import { EvidenceText } from "../components/EvidenceText";
 import { ScoreRow } from "../components/ScoreRow";
 import { Shell } from "../components/Shell";
 import { listFiles, loadLocal } from "../session/persist";
@@ -121,6 +122,26 @@ export function ReportPage() {
             ))}
           </div>
         </section>
+
+        {r.highlights.length > 0 && (
+          <section style={{ marginBottom: 48 }}>
+            <h2 style={{ marginBottom: 4 }}>이 지원자가 고민한 지점</h2>
+            <p className="muted" style={{ marginBottom: 12, fontSize: 14 }}>기록에서 이 사람만의 결정과 시행착오를 뽑았습니다.</p>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, borderTop: "1px solid var(--line)" }}>
+              {r.highlights.map((h, i) => (
+                <li key={i} style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 20, padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
+                  <span style={{ fontWeight: 700 }}>{h.title}</span>
+                  <span style={{ fontSize: 14.5 }}>
+                    <EvidenceText text={h.detail} session={s} onOpen={setOpenRef} />
+                    {h.evidence.filter((e) => !h.detail.includes(`[${e}]`)).map((e) => (
+                      <EvidenceChip key={e} refId={e} onOpen={setOpenRef} />
+                    ))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section style={{ marginBottom: 48 }}>
           <h2 style={{ marginBottom: 12 }}>코드 점검</h2>

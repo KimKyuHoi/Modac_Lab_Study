@@ -85,23 +85,25 @@ const REF_RULES = [
 
 export function designQuestionsPrompt(s: Session, task: Task): { system: string; user: string } {
   const system = [
-    "당신은 코드 리뷰 면접관입니다. 지원자가 제출한 코드와 과정 기록을 읽고, 지원자가 구조를 이해했는지 확인하는 '설명 질문' 2개를 만듭니다.",
-    "좋은 설명 질문은 지원자가 정의서에서 스스로 정한 결정(겹침 규칙, 동시 수정, 시간대 등)과 그 결정이 구현된 코드 위치를 짚고, '왜 그렇게 했는지'를 묻습니다.",
-    "AI 도우미가 준 코드를 그대로 붙인 흔적이 있으면 그 부분의 동작을 설명하게 하는 질문을 포함합니다.",
-    "질문은 한국어 1~2문장, 구체적이어야 합니다. 각 질문에 근거 id를 1개 이상 답니다.",
+    "당신은 코드 리뷰 면접관입니다. 지원자가 AI와 주고받은 기록과 제출한 코드를 읽고, 이 지원자에게만 맞는 질문 3개를 만듭니다. 기록이 다르면 질문도 달라야 합니다.",
+    "",
+    "질문 3개의 종류(kind)와 순서:",
+    "1. ai_direction: 지원자가 AI 도우미에게 내린 지시나 받아들인 답을 하나 골라, '왜 그렇게 시켰는지 / 왜 그 답을 그대로 썼는지(또는 고쳤는지)'를 묻는다. 도우미 대화가 없으면 실무진에게 한 질문 중 하나를 골라 왜 그걸 물었고 답을 코드에 어떻게 반영했는지 묻는다.",
+    "2. design: 코드에서 지원자가 내린 설계 결정(겹침 규칙, 시간대 비교, 상태 구조, 폴백 등) 하나를 짚어 그 코드 위치를 근거로 달고 '이 기준을 고른 이유와 다른 선택지'를 묻는다.",
+    "3. extend: 이 지원자의 현재 코드 구조를 전제로, 요구가 하나 늘었을 때(예: A/B 테스트, 국가 추가, 동시 수정) 어디를 어떻게 바꿀지 묻는다. 그 사람의 코드에서 실제로 바뀌어야 할 부분을 언급한다.",
+    "",
+    "질문은 한국어 1~2문장이고, 기록의 구체적인 표현이나 코드 식별자를 인용해 '당신의 기록을 읽었다'는 게 드러나야 합니다. 각 질문에 근거 id를 1개 이상 답니다.",
     REF_RULES,
-    "출력은 JSON { questions: [{ question, evidence: [...] }, { question, evidence: [...] }] } 입니다.",
+    "출력은 JSON { questions: [{ kind, question, evidence: [...] }, …3개] } 입니다.",
   ].join("\n");
   const user = [
     `과제: ${task.title}`,
+    `요구사항 원문: ${task.requirementMessage}`,
     "",
-    "지원자의 해결책 정의서 [spec]:",
-    s.clarify.spec.text || "(비어 있음)",
-    "",
-    "실무진 Q&A:",
+    "실무진 Q&A (지원자가 요구사항을 구체화하려고 물은 것):",
     renderQa(s),
     "",
-    "AI 도우미 대화:",
+    "AI 도우미 대화 (지원자가 AI에게 시킨 것과 받은 답):",
     renderChat(s),
     "",
     "제출 코드:",
@@ -121,7 +123,7 @@ export function followUpPrompt(item: ReviewItem, s: Session): { system: string; 
     "출력은 JSON { ambiguous: boolean, followUp?: string } 입니다.",
   ].join("\n");
   const user = [
-    `질문 (${item.kind === "explain" ? "설명 질문" : "확장 설계 질문"}): ${item.question}`,
+    `질문: ${item.question}`,
     `지원자 답변: ${item.answer ?? ""}`,
     "",
     "참고용 제출 코드:",
@@ -131,7 +133,7 @@ export function followUpPrompt(item: ReviewItem, s: Session): { system: string; 
 }
 
 const COMPETENCY_DEFS = [
-  "requirements (요구사항 확정력): 질문이 모호한 지점을 겨냥했는가, 정의서에 결정과 이유가 있는가.",
+  "requirements (요구사항 구체화): 실무진 질문이 모호한 지점(규모, 환경, 기한, 세부 동작)을 겨냥했는가, 답을 코드에 반영했는가, 정해지지 않은 것을 스스로 정했는가.",
   "implementation (구현 품질): 체크리스트 통과, 코드 구조.",
   "ai_usage (AI 활용): 도우미에게 무엇을 맡기고 무엇을 검증했는가, 답을 그대로 붙였는가.",
   "understanding (구조 이해): 설명 질문 답변이 코드와 일치하고 이유를 말하는가.",
@@ -146,15 +148,17 @@ export function reportPrompt(s: Session, task: Task): { system: string; user: st
     ...COMPETENCY_DEFS.map((d) => `- ${d}`),
     "",
     "리포트의 목적은 'AI로 구현만 한 사람'과 '구조를 이해한 사람'을 구분하는 것입니다. 설명 질문 답변이 코드와 어긋나거나 일반론이면 understanding 점수를 낮게 줍니다.",
-    "rationale은 한국어 2~3문장이며, 문장 안에 근거 id를 대괄호로 인용합니다. 예: \"겹침 규칙을 등록일 기준으로 정했고[spec] 질문도 그 지점을 겨냥했다[qa-2].\"",
+    "rationale은 한국어 2~3문장이며, 문장 안에 근거 id를 대괄호로 인용합니다. 예: \"겹침 규칙을 등록일 기준으로 정했고[code:src/Home.jsx:15-16] 질문도 그 지점을 겨냥했다[qa-2].\"",
     "checklist는 주어진 항목 5개를 순서대로 코드로 점검해 passed와 근거를 적습니다.",
     "interviewQuestions는 면접관이 실제 면접에서 물을 후속 질문 3개입니다.",
+    "highlights는 이 지원자가 특히 고민했거나 설계한 지점 2~4개입니다. 다른 지원자와 구별되는 것만 고릅니다: AI에게 무엇을 시키고 무엇을 직접 했는지, 어떤 결정을 왜 내렸는지, 어디서 막혔고 어떻게 풀었는지. 각 항목은 title(짧은 제목), detail(2문장, 근거 id 대괄호 인용), evidence[]입니다.",
     REF_RULES,
-    "출력은 JSON { competencies: [...5개], checklist: [...], interviewQuestions: [...] } 입니다.",
+    "출력은 JSON { competencies: [...5개], checklist: [...], interviewQuestions: [...], highlights: [...] } 입니다.",
   ].join("\n");
   const review = s.review.items
     .map((d) => {
-      const lines = [`[${d.id}] (${d.kind === "explain" ? "설명" : "확장 설계"}) Q: ${d.question}`, `      A: ${d.answer ?? "(무응답)"}`];
+      const label = d.kind === "ai_direction" ? "AI 지시" : d.kind === "design" ? "설계 결정" : "확장 설계";
+      const lines = [`[${d.id}] (${label}) Q: ${d.question}`, `      A: ${d.answer ?? "(무응답)"}`];
       if (d.followUp) lines.push(`      꼬리질문: ${d.followUp.question}`, `      A: ${d.followUp.answer ?? "(무응답)"}`);
       return lines.join("\n");
     })
@@ -168,9 +172,6 @@ export function reportPrompt(s: Session, task: Task): { system: string; user: st
     "",
     `실무진 Q&A (${s.clarify.qa.length}/${s.clarify.questionLimit}회 사용):`,
     renderQa(s),
-    "",
-    "해결책 정의서 [spec]:",
-    s.clarify.spec.text || "(비어 있음)",
     "",
     "AI 도우미 대화:",
     renderChat(s),

@@ -25,8 +25,8 @@ test("while the answer is being judged, the card stays active and says so", asyn
   s = reduce(s, {
     type: "review/setItems",
     items: [
-      { id: "dq-1", kind: "explain", question: "첫 질문", evidence: [] },
-      { id: "dq-2", kind: "explain", question: "둘째 질문", evidence: [] },
+      { id: "dq-1", kind: "ai_direction", question: "첫 질문", evidence: [] },
+      { id: "dq-2", kind: "design", question: "둘째 질문", evidence: [] },
       { id: "dq-3", kind: "extend", question: "확장", evidence: [] },
     ],
   });

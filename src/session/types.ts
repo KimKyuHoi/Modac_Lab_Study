@@ -9,7 +9,7 @@ export type Snapshot = { at: string; lines: Record<string, number> };
 
 export type ReviewItem = {
   id: string;
-  kind: "explain" | "extend";
+  kind: "ai_direction" | "design" | "extend";
   question: string;
   evidence: EvidenceRef[];
   answer?: string;
@@ -28,11 +28,15 @@ export type Competency = {
 
 export type ChecklistResult = { item: string; passed: boolean; evidence: EvidenceRef[] };
 
+/** 이 지원자가 특히 고민하거나 설계한 지점. 사람마다 다르게 뽑힌다. */
+export type Highlight = { title: string; detail: string; evidence: EvidenceRef[] };
+
 export type Report = {
   generatedAt: string;
   competencies: Competency[];
   checklist: ChecklistResult[];
   interviewQuestions: string[];
+  highlights: Highlight[];
   interviewer?: { finalScores: Record<string, number>; notes: string; confirmedAt: string };
 };
 
@@ -62,7 +66,7 @@ export type Session = {
 };
 
 export const COMPETENCY_LABELS: Record<CompetencyKey, string> = {
-  requirements: "요구사항 확정력",
+  requirements: "요구사항 구체화",
   implementation: "구현 품질",
   ai_usage: "AI 활용",
   understanding: "구조 이해",

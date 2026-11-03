@@ -104,12 +104,12 @@ function ReviewInner() {
   return (
     <Shell step={1} right={<PhaseTimer startedAt={s.review.startedAt ?? s.startedAt} budgetMin={task.timeBudgetMin.review} overtimeText="시간이 지났어요. 답변은 계속할 수 있어요." />}>
       <main style={{ padding: "40px 24px 80px", maxWidth: 860 }}>
-        <h1 style={{ marginBottom: 8 }}>제출한 코드에 대해 세 가지를 묻습니다</h1>
+        <h1 style={{ marginBottom: 8 }}>당신의 기록과 코드를 읽고 세 가지를 묻습니다</h1>
         <p className="muted" style={{ marginBottom: 32 }}>
-          설명 질문 둘, 확장 설계 질문 하나. 답이 모호하면 꼬리질문이 한 번 더 붙습니다. 코드는 다시 볼 수 없으니 기억을 바탕으로 적으세요.
+          AI에게 시킨 것, 설계 결정, 확장 설계에 대해 하나씩. 답이 모호하면 꼬리질문이 한 번 더 붙습니다. 코드는 다시 볼 수 없으니 기억을 바탕으로 적으세요.
         </p>
 
-        {stage === "loading-questions" && <p className="muted">제출한 코드와 정의서를 읽고 질문을 준비하고 있어요.</p>}
+        {stage === "loading-questions" && <p className="muted">실무진 질문, 도우미 대화, 제출 코드를 읽고 당신에게 맞는 질문을 만들고 있어요.</p>}
         {stage === "generating-report" && <p className="muted">기록 전체를 읽고 리포트를 쓰고 있어요. 1분쯤 걸릴 수 있어요.</p>}
         {stage === "error" && (
           <div style={{ padding: 16, border: "1px solid var(--pink)", borderRadius: 4, marginBottom: 24 }}>

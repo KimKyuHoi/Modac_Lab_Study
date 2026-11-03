@@ -68,7 +68,7 @@ test("build/submit moves to review and stamps times", () => {
 
 test("review/answer and followUp update the item", () => {
   let s = createSession("a", T);
-  s = reduce(s, { type: "review/setItems", items: [{ id: "dq-1", kind: "explain", question: "왜?", evidence: ["spec"] }] });
+  s = reduce(s, { type: "review/setItems", items: [{ id: "dq-1", kind: "design", question: "왜?", evidence: ["spec"] }] });
   s = reduce(s, { type: "review/answer", id: "dq-1", answer: "이유", at: T });
   s = reduce(s, { type: "review/followUp", id: "dq-1", question: "어디?" });
   s = reduce(s, { type: "review/answerFollowUp", id: "dq-1", answer: "여기" });
@@ -82,7 +82,7 @@ test("report/set moves to done and report/confirm stores interviewer", () => {
   let s = createSession("a", T);
   s = reduce(s, {
     type: "report/set",
-    report: { generatedAt: T, competencies: [], checklist: [], interviewQuestions: [] },
+    report: { generatedAt: T, competencies: [], checklist: [], interviewQuestions: [], highlights: [] },
   });
   expect(s.phase).toBe("done");
   s = reduce(s, { type: "report/confirm", finalScores: { requirements: 4 }, notes: "ok", at: T });

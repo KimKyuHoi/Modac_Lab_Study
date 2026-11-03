@@ -27,25 +27,30 @@ test("assistantSystem embeds file contents with their paths", () => {
   expect(sys).toContain("const a = 1;");
 });
 
-test("designQuestionsPrompt lists available ref ids and the spec text", () => {
+test("designQuestionsPrompt lists ref ids, the assistant log, and asks for the three kinds", () => {
   let s = createSession("a", T);
   s = reduce(s, { type: "qa/add", question: "몇 명?", answer: "120만", at: T });
-  s = reduce(s, { type: "spec/edit", text: "겹치면 등록일 늦은 쪽" });
   s = reduce(s, { type: "spec/lock", at: T });
+  s = reduce(s, { type: "chat/add", role: "user", text: "겹치면 최신 걸로 골라줘", at: T });
   s = reduce(s, { type: "files/set", files: { "/src/App.jsx": "a\nb\nc" } });
   const { system, user } = designQuestionsPrompt(s, bannerScheduleTask);
   expect(system).toContain("목록 밖의 id");
+  expect(system).toContain("ai_direction");
+  expect(system).toContain("extend");
   expect(user).toContain("qa-1");
+  expect(user).toContain("chat-1");
+  expect(user).toContain("겹치면 최신 걸로 골라줘");
   expect(user).toContain("code:src/App.jsx:1-3");
-  expect(user).toContain("겹치면 등록일 늦은 쪽");
+  expect(user).not.toContain("정의서");
 });
 
 test("reportPrompt includes competency definitions, checklist and ref ids", () => {
   let s = createSession("a", T);
   s = reduce(s, { type: "spec/lock", at: T });
   const { system, user } = reportPrompt(s, bannerScheduleTask);
-  expect(system).toContain("요구사항 확정력");
+  expect(system).toContain("요구사항 구체화");
   expect(system).toContain("확장 설계");
+  expect(system).toContain("highlights");
   for (const c of bannerScheduleTask.checklist) expect(user).toContain(c);
-  expect(user).toContain("spec");
+  expect(user).not.toContain("정의서");
 });

@@ -12,7 +12,7 @@ type Props = {
   onAnswerFollowUp: (text: string) => void;
 };
 
-const KIND_LABEL = { explain: "설명 질문", extend: "확장 설계 질문" } as const;
+const KIND_LABEL = { ai_direction: "AI에게 시킨 것에 대해", design: "설계 결정에 대해", extend: "확장한다면" } as const;
 
 export function DesignQuestionCard({ item, index, active, busy, judging, onAnswer, onAnswerFollowUp }: Props) {
   const [text, setText] = useState("");
