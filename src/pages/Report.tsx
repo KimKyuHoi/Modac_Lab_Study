@@ -92,7 +92,7 @@ export function ReportPage() {
   };
 
   return (
-    <Shell step={3} right={<Link to="/sessions">세션 목록</Link>}>
+    <Shell step={2} right={<Link to="/sessions">세션 목록</Link>}>
       <main style={{ padding: "40px 24px 100px", maxWidth: 980 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 6 }}>
           <h1>{s.candidateName}</h1>

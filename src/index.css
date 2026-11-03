@@ -29,5 +29,5 @@ p { margin: 0; max-width: 70ch; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 /* 우측 레일 탭 본문이 남은 높이를 다 쓰도록 */
-.rail .ant-tabs-content-holder { flex: 1; min-height: 0; }
-.rail .ant-tabs-content, .rail .ant-tabs-tabpane { height: 100%; }
+.rail .ant-tabs-content-holder, .rail-left .ant-tabs-content-holder { flex: 1; min-height: 0; }
+.rail .ant-tabs-content, .rail .ant-tabs-tabpane, .rail-left .ant-tabs-content, .rail-left .ant-tabs-tabpane { height: 100%; }

@@ -8,9 +8,9 @@ import { useSession } from "../session/store";
 import { bannerScheduleTask } from "../task/bannerSchedule";
 
 const STEPS: { name: string; detail: string }[] = [
-  { name: "과제 읽기와 질문", detail: "마케팅 담당자의 요청을 읽고, AI 실무진에게 5번까지 물어봅니다." },
-  { name: "해결책 정의", detail: "무엇을 어떻게 만들지 스스로 정해서 적습니다. 정하지 않은 건 당신이 정합니다." },
-  { name: "구현", detail: `브라우저 에디터에서 만듭니다. AI 코딩 도우미를 쓸 수 있고 대화는 기록됩니다. 약 ${bannerScheduleTask.timeBudgetMin.build}분.` },
+  { name: "질문", detail: "마케팅 담당자의 애매한 요청을 읽고, AI 실무진에게 5번까지 물어봅니다. 만드는 중에도 물어볼 수 있어요." },
+  { name: "정의", detail: "무엇을 어떻게 만들지 스스로 정해서 정의서에 적습니다. 정하지 않은 건 당신이 정합니다." },
+  { name: "구현", detail: `같은 화면의 에디터에서 만듭니다. AI 코딩 도우미를 쓸 수 있고 대화는 기록됩니다. 세 단계 합쳐 약 ${bannerScheduleTask.timeBudgetMin.build}분.` },
   { name: "설계 질의", detail: `제출 직후 AI가 코드에 대해 세 가지를 묻습니다. 약 ${bannerScheduleTask.timeBudgetMin.review}분.` },
   { name: "리포트", detail: "역량별 점수 초안과 근거가 나옵니다. 최종 판단은 면접관이 합니다." },
 ];
@@ -24,7 +24,7 @@ export function StartPage() {
 
   const begin = () => {
     start(name.trim());
-    navigate("/task");
+    navigate("/work");
   };
 
   return (

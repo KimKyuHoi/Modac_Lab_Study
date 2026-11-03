@@ -102,7 +102,7 @@ function ReviewInner() {
   };
 
   return (
-    <Shell step={2} right={<PhaseTimer startedAt={s.review.startedAt ?? s.startedAt} budgetMin={task.timeBudgetMin.review} overtimeText="시간이 지났어요. 답변은 계속할 수 있어요." />}>
+    <Shell step={1} right={<PhaseTimer startedAt={s.review.startedAt ?? s.startedAt} budgetMin={task.timeBudgetMin.review} overtimeText="시간이 지났어요. 답변은 계속할 수 있어요." />}>
       <main style={{ padding: "40px 24px 80px", maxWidth: 860 }}>
         <h1 style={{ marginBottom: 8 }}>제출한 코드에 대해 세 가지를 묻습니다</h1>
         <p className="muted" style={{ marginBottom: 32 }}>

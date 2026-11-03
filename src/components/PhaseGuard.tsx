@@ -6,9 +6,8 @@ import type { Phase, Session } from "../session/types";
 export function routeForPhase(s: Session): string {
   switch (s.phase) {
     case "clarify":
-      return "/task";
     case "build":
-      return "/build";
+      return "/work";
     case "review":
       return "/review";
     case "done":
@@ -16,9 +15,10 @@ export function routeForPhase(s: Session): string {
   }
 }
 
-export function PhaseGuard({ phase, children }: { phase: Phase; children: ReactNode }) {
+export function PhaseGuard({ phase, children }: { phase: Phase | Phase[]; children: ReactNode }) {
   const { session } = useSession();
+  const allowed = Array.isArray(phase) ? phase : [phase];
   if (!session) return <Navigate to="/" replace />;
-  if (session.phase !== phase) return <Navigate to={routeForPhase(session)} replace />;
+  if (!allowed.includes(session.phase)) return <Navigate to={routeForPhase(session)} replace />;
   return <>{children}</>;
 }

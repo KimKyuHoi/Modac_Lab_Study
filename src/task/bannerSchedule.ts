@@ -55,5 +55,5 @@ export const bannerScheduleTask: Task = {
     "기본 배너 폴백이 있다.",
   ],
   starterFiles,
-  timeBudgetMin: { build: 60, review: 15 },
+  timeBudgetMin: { build: 75, review: 15 },
 };

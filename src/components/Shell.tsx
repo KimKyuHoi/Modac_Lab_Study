@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useSession } from "../session/store";
 import { routeForPhase } from "./PhaseGuard";
 
-const PHASES = ["과제와 질문", "구현", "설계 질의", "리포트"];
+const PHASES = ["질문·정의·구현", "설계 질의", "리포트"];
 
 export function Shell({ step, right, children, wide }: { step?: number; right?: ReactNode; children: ReactNode; wide?: boolean }) {
   const { session } = useSession();

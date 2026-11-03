@@ -17,14 +17,14 @@ test("start creates a session and navigates to /task", async () => {
       <SessionProvider initial={null}>
         <Routes>
           <Route path="/" element={<StartPage />} />
-          <Route path="/task" element={<Where />} />
+          <Route path="/work" element={<Where />} />
         </Routes>
       </SessionProvider>
     </MemoryRouter>,
   );
   await userEvent.type(screen.getByLabelText("이름"), "김규회");
   await userEvent.click(screen.getByRole("button", { name: "응시 시작" }));
-  expect(await screen.findByTestId("where")).toHaveTextContent("/task");
+  expect(await screen.findByTestId("where")).toHaveTextContent("/work");
   expect(loadCurrent()?.candidateName).toBe("김규회");
 });
 
@@ -48,12 +48,12 @@ test("with a session in progress, offers 이어서 진행 that navigates to its 
       <SessionProvider initial={s}>
         <Routes>
           <Route path="/" element={<StartPage />} />
-          <Route path="/build" element={<Where />} />
+          <Route path="/work" element={<Where />} />
         </Routes>
       </SessionProvider>
     </MemoryRouter>,
   );
   expect(screen.getByText("진행 중인 세션이 있어요", { exact: false })).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "이어서 진행" }));
-  expect(await screen.findByTestId("where")).toHaveTextContent("/build");
+  expect(await screen.findByTestId("where")).toHaveTextContent("/work");
 });
