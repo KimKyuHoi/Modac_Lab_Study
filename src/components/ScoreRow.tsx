@@ -27,6 +27,8 @@ function Segments({ score }: { score: number }) {
 
 export function ScoreRow({ label, draftScore, rationale, evidence, session, final, onFinalChange, onOpen, locked }: Props) {
   const noEvidence = evidence.length === 0;
+  // 본문에 이미 인용된 근거는 아래 줄에 반복하지 않는다.
+  const extra = evidence.filter((r) => !rationale.includes(`[${r}]`));
   return (
     <div style={{ display: "grid", gridTemplateColumns: "150px 1fr 120px", gap: 20, padding: "18px 0", borderBottom: "1px solid var(--line)", alignItems: "start" }}>
       <div>
@@ -39,11 +41,13 @@ export function ScoreRow({ label, draftScore, rationale, evidence, session, fina
         ) : (
           <>
             <EvidenceText text={rationale} session={session} onOpen={onOpen} />
-            <div style={{ marginTop: 6 }}>
-              {evidence.map((r) => (
-                <EvidenceChip key={r} refId={r} onOpen={onOpen} />
-              ))}
-            </div>
+            {extra.length > 0 && (
+              <div style={{ marginTop: 6 }}>
+                {extra.map((r) => (
+                  <EvidenceChip key={r} refId={r} onOpen={onOpen} />
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>

@@ -1,0 +1,228 @@
+{
+  "id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+  "candidateName": "샘플 지원자",
+  "taskId": "banner-schedule",
+  "phase": "done",
+  "startedAt": "2026-11-04T01:00:00.000Z",
+  "clarify": {
+    "qa": [
+      {
+        "id": "qa-1",
+        "question": "나라별이라고 하셨는데 어떤 나라들부터 시작하나요? 나중에 늘어날 수도 있나요?",
+        "answer": "지금은 KR, JP, US 세 곳이에요. 나중에 늘어날 거예요.",
+        "at": "2026-11-04T01:02:00.000Z"
+      },
+      {
+        "id": "qa-2",
+        "question": "같은 나라에서 예약 기간이 겹치면 어떤 배너를 보여 줘야 하나요?",
+        "answer": "한 자리에 하나만 보여야 하는 건 확실한데, 뭘 우선할지는 안 정했어요. 개발자분이 정해 주시면 좋겠어요, 이유도 같이요.",
+        "at": "2026-11-04T01:04:00.000Z"
+      },
+      {
+        "id": "qa-3",
+        "question": "예약 시간은 한국 시간 기준인가요, 각 나라 현지 시간인가요?",
+        "answer": "각 나라 현지 시간 기준이에요.",
+        "at": "2026-11-04T01:05:00.000Z"
+      },
+      {
+        "id": "qa-4",
+        "question": "서버 API를 바꿀 수 있나요, 아니면 프론트에서만 해결해야 하나요?",
+        "answer": "서버 쪽은 백엔드팀에 요청해야 해서 보통 2주 걸려요. 이번 건은 프론트에서 먼저 풀어 주시면 좋겠어요.",
+        "at": "2026-11-04T01:07:00.000Z"
+      }
+    ],
+    "questionLimit": 5,
+    "spec": {
+      "text": "- 배너에 country(KR/JP/US/없음), startAt, endAt 필드를 추가한다. 국가 목록은 상수 배열로 두어 추가가 쉽게 한다.\n- 홈에서는 사용자 국가와 같고 현재 시각이 [startAt, endAt) 안에 있는 배너만 후보로 삼는다.\n- 겹치면 등록일(createdAt)이 가장 늦은 배너를 보여 준다. 이유: 운영자가 나중에 넣은 게 더 최신 의도일 가능성이 높고, 규칙이 단순해 운영자에게 설명하기 쉽다.\n- 시간대는 국가별 IANA 시간대 상수로 현지 시간을 UTC로 바꿔 비교한다.\n- 후보가 없으면 country가 없는 기본 배너를 보여 준다.\n- 동시 수정은 이번 범위에서 다루지 않는다. 프론트만으로는 막을 수 없고, 서버에 updatedAt 비교가 필요하다.\n- 관리 화면에 국가·기간 입력과 '지금 보이는 배너' 표시를 추가한다.",
+      "lockedAt": "2026-11-04T01:15:00.000Z"
+    }
+  },
+  "build": {
+    "startedAt": "2026-11-04T01:15:00.000Z",
+    "chat": [
+      {
+        "id": "chat-1",
+        "role": "user",
+        "text": "Home.jsx에서 country와 기간으로 배너를 고르는 함수 pickBanner를 분리해서 써 줘. 겹치면 createdAt이 늦은 쪽.",
+        "at": "2026-11-04T01:20:00.000Z"
+      },
+      {
+        "id": "chat-2",
+        "role": "model",
+        "text": "Home.jsx에 pickBanner(banners, country, now)를 추가하고 컴포넌트에서 호출하도록 바꾸면 됩니다. (코드 생략)",
+        "at": "2026-11-04T01:20:20.000Z"
+      },
+      {
+        "id": "chat-3",
+        "role": "user",
+        "text": "현지 시간 비교는 어떻게 하는 게 좋아? Intl.DateTimeFormat 써도 돼?",
+        "at": "2026-11-04T01:31:00.000Z"
+      },
+      {
+        "id": "chat-4",
+        "role": "model",
+        "text": "운영자가 입력한 현지 시각을 해당 국가 시간대로 해석해 UTC로 바꾸는 쪽이 안전합니다. 작은 헬퍼로 분리하길 권합니다. 어느 시간대로 저장할지는 정해 주세요.",
+        "at": "2026-11-04T01:31:30.000Z"
+      }
+    ],
+    "snapshots": [
+      {
+        "at": "2026-11-04T01:17:00.000Z",
+        "lines": {
+          "/src/Home.jsx": 34,
+          "/src/Admin.jsx": 52
+        }
+      },
+      {
+        "at": "2026-11-04T01:19:00.000Z",
+        "lines": {
+          "/src/Home.jsx": 36,
+          "/src/Admin.jsx": 52
+        }
+      },
+      {
+        "at": "2026-11-04T02:05:00.000Z",
+        "lines": {
+          "/src/Home.jsx": 36,
+          "/src/Admin.jsx": 78
+        }
+      }
+    ],
+    "files": {
+      "/src/Home.jsx": "import { useEffect, useState } from \"react\";\nimport { listBanners } from \"./api/banners\";\nimport { getUserCountry, getNow } from \"./user\";\n\n// 국가와 기간이 맞는 예약 중 등록일이 가장 늦은 배너를 고른다.\nexport function pickBanner(banners, country, now) {\n  const matched = banners.filter((b) => {\n    if (!b.country) return false;\n    if (b.country !== country) return false;\n    const start = new Date(b.startAt);\n    const end = new Date(b.endAt);\n    return start <= now && now < end;\n  });\n  if (matched.length === 0) return banners.find((b) => !b.country) ?? null;\n  return matched.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];\n}\n\nexport default function Home() {\n  const [banners, setBanners] = useState([]);\n  const country = getUserCountry();\n  useEffect(() => { listBanners().then(setBanners); }, []);\n  const banner = pickBanner(banners, country, getNow());\n  return (\n    <section className=\"home\">\n      <div className=\"slot\">\n        {banner ? <img src={banner.imageUrl} alt={banner.title} /> : <div className=\"empty\">배너 없음</div>}\n      </div>\n      <p className=\"hint\">현재 사용자 국가: {country}</p>\n    </section>\n  );\n}\n"
+    },
+    "submittedAt": "2026-11-04T02:05:00.000Z"
+  },
+  "review": {
+    "startedAt": "2026-11-04T02:05:00.000Z",
+    "items": [
+      {
+        "id": "dq-1",
+        "kind": "explain",
+        "question": "겹치는 예약에서 등록일이 늦은 배너를 고르도록 했는데, 이 기준을 고른 이유와 그 코드가 어디에 있는지 설명해 주세요.",
+        "evidence": [
+          "spec",
+          "code:src/Home.jsx:6-16"
+        ],
+        "answer": "pickBanner의 마지막 줄에서 createdAt 내림차순으로 정렬해 첫 번째를 고릅니다. 운영자가 나중에 넣은 게 최신 의도라고 봤고, 우선순위 필드를 따로 두면 운영자가 또 관리해야 해서 뺐습니다.",
+        "answeredAt": "2026-11-04T02:09:00.000Z"
+      },
+      {
+        "id": "dq-2",
+        "kind": "explain",
+        "question": "현지 시간 비교를 어떻게 구현했나요? 도우미가 시간대 저장 방식을 정해 달라고 했는데 무엇으로 정했나요?",
+        "evidence": [
+          "chat-4",
+          "code:src/Home.jsx:10-12"
+        ],
+        "answer": "시간은 보통 그런 식으로 비교하면 되는 것 같습니다.",
+        "followUp": {
+          "question": "startAt을 new Date()로 바로 파싱하면 어느 시간대로 해석되나요? 국가별 시간대는 코드의 어디에서 적용되나요?",
+          "answer": "브라우저 시간대로 해석될 것 같고, 국가별 시간대는 아직 적용하지 못했습니다."
+        },
+        "answeredAt": "2026-11-04T02:13:00.000Z"
+      },
+      {
+        "id": "dq-3",
+        "kind": "extend",
+        "question": "같은 자리에서 국가별로 배너 두 개를 A/B 테스트해야 한다면 지금 구조에서 무엇을 바꾸겠어요?",
+        "evidence": [],
+        "answer": "pickBanner가 하나만 돌려주는 구조라, 후보 목록을 돌려주고 그 위에 사용자 id 해시로 그룹을 나누는 selectVariant를 한 겹 더 두겠습니다. 노출 비율은 배너 데이터에 weight 필드로 넣겠습니다.",
+        "answeredAt": "2026-11-04T02:18:00.000Z"
+      }
+    ]
+  },
+  "report": {
+    "generatedAt": "2026-11-04T02:19:00.000Z",
+    "competencies": [
+      {
+        "key": "requirements",
+        "draftScore": 4,
+        "rationale": "질문 네 개가 국가 목록, 겹침, 시간대, 서버 변경 가능 여부라는 핵심 모호 지점을 겨냥했다[qa-2][qa-3][qa-4]. 정의서에 겹침 규칙과 그 이유, 범위 밖(동시 수정)을 명시했다[spec].",
+        "evidence": [
+          "qa-2",
+          "qa-3",
+          "qa-4",
+          "spec"
+        ]
+      },
+      {
+        "key": "implementation",
+        "draftScore": 3,
+        "rationale": "국가·기간 필터와 기본 배너 폴백이 있다[code:src/Home.jsx:6-16]. 정의서가 약속한 현지 시간대 변환은 코드에 없다[spec].",
+        "evidence": [
+          "code:src/Home.jsx:6-16",
+          "spec"
+        ]
+      },
+      {
+        "key": "ai_usage",
+        "draftScore": 4,
+        "rationale": "도우미에게 함수 분리와 시간대 방식을 물었고, 결정은 본인이 하겠다는 흐름이었다[chat-1][chat-3]. 다만 도우미가 되물은 시간대 결정을 끝내지 못했다[chat-4].",
+        "evidence": [
+          "chat-1",
+          "chat-3",
+          "chat-4"
+        ]
+      },
+      {
+        "key": "understanding",
+        "draftScore": 3,
+        "rationale": "겹침 규칙은 코드 위치와 이유를 정확히 설명했다[dq-1]. 시간대 질문에는 일반론으로 답했고 꼬리질문에서 미구현을 인정했다[dq-2].",
+        "evidence": [
+          "dq-1",
+          "dq-2"
+        ]
+      },
+      {
+        "key": "extension",
+        "draftScore": 4,
+        "rationale": "단일 선택 함수를 후보 목록과 선택 계층으로 나누는 구체적 변경점과 비율 저장 위치를 말했다[dq-3].",
+        "evidence": [
+          "dq-3"
+        ]
+      }
+    ],
+    "checklist": [
+      {
+        "item": "국가별 필터링이 동작한다.",
+        "passed": true,
+        "evidence": [
+          "code:src/Home.jsx:7-10"
+        ]
+      },
+      {
+        "item": "기간 안에서만 노출된다.",
+        "passed": true,
+        "evidence": [
+          "code:src/Home.jsx:10-13"
+        ]
+      },
+      {
+        "item": "겹치는 예약을 처리하는 규칙이 코드에 있고 정의서와 일치한다.",
+        "passed": true,
+        "evidence": [
+          "code:src/Home.jsx:15-16",
+          "spec"
+        ]
+      },
+      {
+        "item": "관리 화면에서 예약을 등록·수정할 수 있다.",
+        "passed": false,
+        "evidence": []
+      },
+      {
+        "item": "기본 배너 폴백이 있다.",
+        "passed": true,
+        "evidence": [
+          "code:src/Home.jsx:14-15"
+        ]
+      }
+    ],
+    "interviewQuestions": [
+      "현지 시간대 변환을 실제로 넣는다면 어느 함수에서, 어떤 입력을 받아 처리하겠어요?",
+      "동시 수정을 범위 밖으로 둔 판단은 좋았는데, 프론트에서 최소한으로 할 수 있는 완화책이 있다면요?",
+      "등록일 우선 규칙을 마케팅팀이 거부하면 대안으로 무엇을 제안하겠어요?"
+    ]
+  }
+}
