@@ -1,5 +1,11 @@
 // 지원자가 받는 시작 코드. Sandpack "react" 템플릿 위에 덮어쓴다.
 export const starterFiles: Record<string, string> = {
+  "/index.js": `import React from "react";
+import { createRoot } from "react-dom/client";
+import App from "./src/App";
+
+createRoot(document.getElementById("root")).render(<App />);
+`,
   "/src/App.jsx": `import { useState } from "react";
 import Home from "./Home";
 import Admin from "./Admin";
@@ -164,3 +170,6 @@ th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #d9dee5; }
 .url { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 `,
 };
+
+/** 에디터에 보여 줄 파일. Sandpack 템플릿 기본 파일과 진입 파일은 숨긴다. */
+export const visibleStarterFiles = Object.keys(starterFiles).filter((p) => p.startsWith("/src/"));
