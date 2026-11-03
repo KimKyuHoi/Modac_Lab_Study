@@ -11,12 +11,13 @@ import { SpecEditor } from "../components/SpecEditor";
 import { useSession } from "../session/store";
 import { bannerScheduleTask as task } from "../task/bannerSchedule";
 import { visibleStarterFiles } from "../task/starterFiles";
+import { candidateFiles } from "../session/files";
 
 const SNAPSHOT_MS = 2 * 60 * 1000;
 
 function lineCounts(files: Record<string, string>): Record<string, number> {
   const out: Record<string, number> = {};
-  for (const [p, c] of Object.entries(files)) if (p.startsWith("/src/")) out[p] = c.split("\n").length;
+  for (const [p, c] of Object.entries(candidateFiles(files))) out[p] = c.split("\n").length;
   return out;
 }
 
@@ -27,8 +28,9 @@ function BuildInner() {
   const s = session!;
   const [pending, setPending] = useState(false);
   // 세션에 저장된 파일이 있으면 그걸로 이어서, 없으면 시작 코드
-  const [initialFiles] = useState(() => (Object.keys(s.build.files).length > 0 ? s.build.files : task.starterFiles));
-  const latestFiles = useRef<Record<string, string>>(initialFiles);
+  // 세션 파일은 /src/ 만 저장되므로 템플릿 진입 파일(/index.js)은 항상 시작 코드에서 보탠다.
+  const [initialFiles] = useState(() => (Object.keys(s.build.files).length > 0 ? { ...task.starterFiles, ...s.build.files } : task.starterFiles));
+  const latestFiles = useRef<Record<string, string>>(candidateFiles(initialFiles));
 
   const onFilesChange = useCallback(
     (files: Record<string, string>) => {

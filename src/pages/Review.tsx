@@ -24,6 +24,7 @@ function ReviewInner() {
   const [stage, setStage] = useState<Stage>(s.review.items.length ? "answering" : "loading-questions");
   const [error, setError] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [judgingId, setJudgingId] = useState<string | null>(null);
   const started = useRef(false);
 
   const loadQuestions = async () => {
@@ -66,22 +67,26 @@ function ReviewInner() {
   }, []);
 
   const items = s.review.items;
-  const activeIndex = items.findIndex((i) => !isDone(i));
+  // 판단 중인 문항은 답이 저장돼 있어도 활성 상태를 유지한다.
+  const activeIndex = judgingId ? items.findIndex((i) => i.id === judgingId) : items.findIndex((i) => !isDone(i));
 
   const answer = async (item: ReviewItem, text: string) => {
     setBusy(true);
+    setJudgingId(item.id);
     const at = new Date().toISOString();
     const afterAnswer = dispatch({ type: "review/answer", id: item.id, answer: text, at });
     try {
       const judged = await judgeFollowUp({ ...item, answer: text }, afterAnswer ?? s);
       if (judged.ambiguous && judged.followUp) {
         dispatch({ type: "review/followUp", id: item.id, question: judged.followUp });
+        setJudgingId(null);
         setBusy(false);
         return;
       }
     } catch {
       /* 꼬리질문 판단 실패는 응시를 막지 않는다 */
     }
+    setJudgingId(null);
     setBusy(false);
     advance(afterAnswer?.review.items ?? items, item.id);
   };
@@ -122,6 +127,7 @@ function ReviewInner() {
             index={i}
             active={stage === "answering" && i === activeIndex}
             busy={busy}
+            judging={judgingId === item.id}
             onAnswer={(t) => void answer(item, t)}
             onAnswerFollowUp={(t) => answerFollowUp(item, t)}
           />

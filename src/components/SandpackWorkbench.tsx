@@ -7,6 +7,7 @@ import {
   useSandpack,
 } from "@codesandbox/sandpack-react";
 import { useEffect, useRef } from "react";
+import { candidateFiles } from "../session/files";
 
 type Files = Record<string, string>;
 
@@ -17,7 +18,7 @@ function FilesBridge({ onFilesChange }: { onFilesChange: (files: Files) => void 
     const files: Files = {};
     for (const [path, f] of Object.entries(sandpack.files)) files[path] = f.code;
     if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => onFilesChange(files), 800);
+    timer.current = window.setTimeout(() => onFilesChange(candidateFiles(files)), 800);
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
     };

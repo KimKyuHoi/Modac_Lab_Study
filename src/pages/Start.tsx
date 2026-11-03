@@ -1,4 +1,5 @@
 import { Alert, Button, Input } from "antd";
+import { routeForPhase } from "../components/PhaseGuard";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { isConfigured } from "../ai";
@@ -16,7 +17,8 @@ const STEPS: { name: string; detail: string }[] = [
 
 export function StartPage() {
   const [name, setName] = useState("");
-  const { start } = useSession();
+  const { start, session } = useSession();
+  const inProgress = session && session.phase !== "done" ? session : null;
   const navigate = useNavigate();
   const configured = isConfigured();
 
@@ -36,6 +38,17 @@ export function StartPage() {
             message="Gemini API 키가 설정되지 않았어요."
             description=".env.local 파일에 VITE_GEMINI_API_KEY를 넣고 개발 서버를 다시 시작하세요. 키가 없으면 AI 실무진과 도우미가 답하지 못합니다."
           />
+        )}
+        {inProgress && (
+          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 18px", borderLeft: "4px solid var(--pink)", background: "var(--frost)", marginBottom: 32 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700 }}>진행 중인 세션이 있어요: {inProgress.candidateName}</div>
+              <div className="muted" style={{ fontSize: 14 }}>새로 시작하면 이 세션은 세션 목록에만 남고 이어서 할 수 없어요.</div>
+            </div>
+            <Button type="primary" onClick={() => navigate(routeForPhase(inProgress))}>
+              이어서 진행
+            </Button>
+          </div>
         )}
         <h1 style={{ fontSize: 34, marginBottom: 12 }}>애매한 요청을 받아서, 직접 정하고, 만들고, 설명합니다.</h1>
         <p className="prose muted" style={{ fontSize: 17, marginBottom: 40 }}>

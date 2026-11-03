@@ -7,13 +7,14 @@ type Props = {
   index: number;
   active: boolean;
   busy: boolean;
+  judging?: boolean;
   onAnswer: (text: string) => void;
   onAnswerFollowUp: (text: string) => void;
 };
 
 const KIND_LABEL = { explain: "설명 질문", extend: "확장 설계 질문" } as const;
 
-export function DesignQuestionCard({ item, index, active, busy, onAnswer, onAnswerFollowUp }: Props) {
+export function DesignQuestionCard({ item, index, active, busy, judging, onAnswer, onAnswerFollowUp }: Props) {
   const [text, setText] = useState("");
   const [followText, setFollowText] = useState("");
   const needsFollowUp = !!item.followUp && item.followUp.answer === undefined;
@@ -34,9 +35,14 @@ export function DesignQuestionCard({ item, index, active, busy, onAnswer, onAnsw
       <p style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.55, maxWidth: "70ch" }}>{item.question}</p>
 
       {item.answer !== undefined ? (
-        <p className="prose" style={{ marginTop: 10, whiteSpace: "pre-wrap", color: "var(--muted)" }}>
-          {item.answer}
-        </p>
+        <>
+          <p className="prose" style={{ marginTop: 10, whiteSpace: "pre-wrap", color: "var(--muted)" }}>
+            {item.answer}
+          </p>
+          {judging && (
+            <p style={{ marginTop: 8, fontSize: 13, color: "var(--pink)" }}>답변을 읽고 있어요</p>
+          )}
+        </>
       ) : (
         active && (
           <div style={{ marginTop: 12 }}>

@@ -1,9 +1,14 @@
 import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
+import { useSession } from "../session/store";
+import { routeForPhase } from "./PhaseGuard";
 
 const PHASES = ["과제와 질문", "구현", "설계 질의", "리포트"];
 
 export function Shell({ step, right, children, wide }: { step?: number; right?: ReactNode; children: ReactNode; wide?: boolean }) {
+  const { session } = useSession();
+  // 응시 중에는 로고가 현재 단계로 돌아간다. 실수로 시작 화면에 가서 세션을 잃지 않게.
+  const home = session && session.phase !== "done" ? routeForPhase(session) : "/";
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
       <header
@@ -17,7 +22,7 @@ export function Shell({ step, right, children, wide }: { step?: number; right?: 
           flexShrink: 0,
         }}
       >
-        <Link to="/" style={{ color: "var(--ink)", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+        <Link to={home} style={{ color: "var(--ink)", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
           AI 활용 과제 평가
         </Link>
         {step !== undefined && (

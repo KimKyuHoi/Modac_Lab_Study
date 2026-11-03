@@ -1,9 +1,13 @@
 import { z } from "zod";
 
 const generateContent = vi.fn();
+const ctorOptions: unknown[] = [];
 vi.mock("@google/genai", () => ({
   GoogleGenAI: class {
     models = { generateContent };
+    constructor(opts: unknown) {
+      ctorOptions.push(opts);
+    }
   },
 }));
 
@@ -46,4 +50,12 @@ test("callText passes system instruction and turns to generateContent", async ()
   const arg = generateContent.mock.calls[0][0];
   expect(arg.config.systemInstruction).toBe("페르소나");
   expect(arg.contents).toEqual([{ role: "user", parts: [{ text: "질문" }] }]);
+});
+
+test("client is created with a 60s request timeout", async () => {
+  vi.resetModules();
+  const { callText } = await import("./gemini");
+  generateContent.mockResolvedValueOnce({ text: "ok" });
+  await callText("sys", [{ role: "user", text: "hi" }]);
+  expect(ctorOptions[ctorOptions.length - 1]).toMatchObject({ apiKey: "test-key", httpOptions: { timeout: 60_000 } });
 });

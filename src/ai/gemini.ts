@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 export type Turn = { role: "user" | "model"; text: string };
 
 const DEFAULT_MODEL = "gemini-flash-latest";
+// 60초 안에 답이 없으면 실패로 보고 재시도 버튼을 띄운다. 응시자가 빈 화면에 갇히지 않게 한다.
 
 function apiKey(): string {
   return (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim() ?? "";
@@ -21,7 +22,7 @@ function ai(): GoogleGenAI {
   if (!isConfigured()) {
     throw new Error("VITE_GEMINI_API_KEY가 비어 있어요. .env.local에 키를 넣고 개발 서버를 다시 시작하세요.");
   }
-  if (!client) client = new GoogleGenAI({ apiKey: apiKey() });
+  if (!client) client = new GoogleGenAI({ apiKey: apiKey(), httpOptions: { timeout: 60_000 } });
   return client;
 }
 
