@@ -5,6 +5,8 @@ import type { Session } from "./types";
 
 type Store = {
   session: Session | null;
+  /** 렌더 지연 없이 최신 세션을 읽는다 (연속 dispatch 직후 등). */
+  current: () => Session | null;
   dispatch: (a: Action) => Session | null;
   start: (name: string) => Session;
   load: (s: Session) => void;
@@ -47,7 +49,9 @@ export function SessionProvider({ children, initial }: { children: ReactNode; in
     if (latest.current) await saveFile(latest.current);
   }, []);
 
-  const value = useMemo(() => ({ session, dispatch, start, load, persistFile }), [session, dispatch, start, load, persistFile]);
+  const current = useCallback(() => latest.current, []);
+
+  const value = useMemo(() => ({ session, current, dispatch, start, load, persistFile }), [session, current, dispatch, start, load, persistFile]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
