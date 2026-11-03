@@ -148,7 +148,7 @@ function WorkInner() {
     >
       <div style={{ display: "flex", height: "calc(100vh - 52px)", minWidth: 0 }}>
         <aside style={{ width: widths.left, flexShrink: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
-          <div style={{ padding: "12px 20px 10px", borderBottom: "1px solid var(--line)" }}>
+          <div style={{ padding: "12px 20px 10px", borderBottom: "1px solid var(--line)", maxHeight: "48vh", overflowY: "auto", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
               <h3 style={{ fontSize: 15 }}>{task.title}</h3>
               <QuestionBudget total={s.clarify.questionLimit} used={s.clarify.qa.length} />
@@ -180,7 +180,7 @@ function WorkInner() {
             disabled={remaining === 0}
             disabledText="질문을 다 썼어요. 나머지는 직접 정하세요."
             placeholder="실무진에게 콕 집어 물어보세요. 예: 겹치는 예약은 어떻게 할까요?"
-            emptyText="아직 질문하지 않았어요. 서비스 규모, 사용 환경, 기한, 세부 동작 모두 물어볼 수 있어요."
+            emptyText="아직 질문하지 않았어요. 서비스 기본 정보는 위에 있으니, 기능 세부(국가 목록, 예약 방식, 겹침, 시간대, 동시 수정, 기본 배너 등)를 콕 집어 물어보세요."
             modelLabel="실무진"
           />
         </aside>
