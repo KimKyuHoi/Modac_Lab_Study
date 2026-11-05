@@ -138,3 +138,23 @@ p { margin: 0; max-width: 70ch; }
 .rv-q { margin: 0 0 6px; color: #fff; font-weight: 600; max-width: none; }
 .rv-a { margin: 0; color: #c8c8c8; line-height: 1.6; max-width: none; }
 .rv-empty { padding: 20px; color: #8b8b8b; }
+
+/* 도우미가 에디터에 적용한 변경 */
+.edit-summary { margin-top: 6px; border: 1px solid #3c3c3c; border-radius: 6px; overflow: hidden; font-size: 12px; }
+.edit-row + .edit-row { border-top: 1px solid #3c3c3c; }
+.edit-row.reverted { opacity: 0.55; }
+.edit-head { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #252526; }
+.edit-toggle { font: inherit; color: #d4d4d4; background: none; border: 0; padding: 0; cursor: pointer; display: flex; gap: 6px; align-items: center; min-width: 0; }
+.edit-tag { font-size: 11px; color: #9d9d9d; border: 1px solid #3c3c3c; border-radius: 3px; padding: 0 4px; }
+.edit-add { color: #73c991; font-variant-numeric: tabular-nums; }
+.edit-del { color: #f48771; font-variant-numeric: tabular-nums; }
+.edit-actions { margin-left: auto; display: flex; gap: 6px; }
+.edit-actions button { font: inherit; font-size: 11px; color: #d4d4d4; background: transparent; border: 1px solid #3c3c3c; border-radius: 3px; padding: 1px 6px; cursor: pointer; }
+.edit-actions button:hover { border-color: #6b6b6b; color: #fff; }
+.edit-diff { margin: 0; max-height: 260px; overflow: auto; background: #1e1e1e; font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 11.5px; line-height: 18px; }
+.edit-diff > div { display: flex; white-space: pre; padding-right: 8px; }
+.edit-diff .add { background: rgba(115, 201, 145, 0.14); }
+.edit-diff .del { background: rgba(244, 135, 113, 0.14); }
+.edit-diff .gap { color: #6e7681; padding-left: 8px; }
+.edit-diff .no { color: #6e7681; min-width: 32px; text-align: right; padding-right: 6px; user-select: none; }
+.edit-diff .sign { width: 14px; color: #9d9d9d; user-select: none; }

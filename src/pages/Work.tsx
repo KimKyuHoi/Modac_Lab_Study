@@ -10,7 +10,9 @@ import { PhaseGuard } from "../components/PhaseGuard";
 import { PhaseTimer } from "../components/PhaseTimer";
 import { QuestionBudget } from "../components/QuestionBudget";
 import { ResizeHandle } from "../components/ResizeHandle";
-import { SandpackWorkbench } from "../components/SandpackWorkbench";
+import { SandpackWorkbench, type WorkbenchApi } from "../components/SandpackWorkbench";
+import { EditSummary } from "../components/EditSummary";
+import type { AppliedEdit } from "../session/types";
 import { Shell } from "../components/Shell";
 import { candidateFiles } from "../session/files";
 import { remainingQuestions } from "../session/reducer";
@@ -51,6 +53,7 @@ function WorkInner() {
   const [widths, setWidths] = useState(loadWidths);
   const remaining = remainingQuestions(s);
   const { perf, setSlowdown, remeasure, remeasureAndSettle } = usePerfProbe();
+  const workbench = useRef<WorkbenchApi | null>(null);
   const perfRef = useRef(perf);
   perfRef.current = perf;
   const perfCount = s.build.perf?.length ?? 0;
@@ -96,6 +99,9 @@ function WorkInner() {
     { role: "model" as const, text: q.answer },
   ]);
   const helpTurns = s.build.chat.map((c) => ({ role: c.role, text: c.text, images: c.images }));
+  const helpExtras = s.build.chat.map((c) =>
+    c.edits?.length ? <EditSummary edits={c.edits} onRevert={(path) => revertEdit(c.id, c.edits!.find((e) => e.path === path)!)} onOpen={(path) => workbench.current?.openFile(path)} /> : null,
+  );
 
   const ask = async (text: string) => {
     setAskPending(true);
@@ -113,15 +119,49 @@ function WorkInner() {
   const help = async (text: string, images: string[]) => {
     setHelpPending(true);
     try {
-      const reply = await askCodingAssistant(s, latestFiles.current, text, images);
+      const { reply, edits } = await askCodingAssistant(s, latestFiles.current, text, images);
+      // 도우미가 고친 파일은 에디터에 바로 반영한다. 되돌릴 수 있게 바뀌기 전 내용을 함께 남긴다.
+      const applied: AppliedEdit[] = [];
+      for (const e of edits) {
+        const before = latestFiles.current[e.path] ?? null;
+        workbench.current?.setFile(e.path, e.content);
+        latestFiles.current = { ...latestFiles.current, [e.path]: e.content };
+        applied.push({ path: e.path, before, after: e.content });
+      }
+      if (applied.length > 0) workbench.current?.openFile(applied[0].path);
       dispatch({ type: "chat/add", role: "user", text, images, at: new Date().toISOString() });
-      dispatch({ type: "chat/add", role: "model", text: reply, at: new Date().toISOString() });
+      dispatch({ type: "chat/add", role: "model", text: reply, edits: applied, at: new Date().toISOString() });
     } catch (e) {
       message.error(e instanceof Error ? e.message : "도우미 답변을 받지 못했어요. 다시 보내 주세요.");
       throw e;
     } finally {
       setHelpPending(false);
     }
+  };
+
+  const revertEdit = (chatId: string, edit: AppliedEdit) => {
+    const current = latestFiles.current[edit.path];
+    const run = () => {
+      if (edit.before === null) {
+        workbench.current?.removeFile(edit.path);
+        const { [edit.path]: _gone, ...rest } = latestFiles.current;
+        latestFiles.current = rest;
+      } else {
+        workbench.current?.setFile(edit.path, edit.before);
+        latestFiles.current = { ...latestFiles.current, [edit.path]: edit.before };
+      }
+      dispatch({ type: "chat/revertEdit", chatId, path: edit.path });
+    };
+    // 도우미가 고친 뒤 직접 손댔다면 그 수정도 사라지므로 한 번 묻는다
+    if (current !== undefined && current !== edit.after) {
+      modal.confirm({
+        title: "되돌릴까요?",
+        content: "도우미가 고친 뒤에 직접 바꾼 내용도 함께 사라져요.",
+        okText: "되돌리기",
+        cancelText: "취소",
+        onOk: run,
+      });
+    } else run();
   };
 
   const submit = () => {
@@ -245,6 +285,7 @@ function WorkInner() {
           <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
             <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
               <SandpackWorkbench
+                apiRef={workbench}
                 files={initialFiles}
                 visibleFiles={visibleFiles}
                 activeFile={task.activeFile}
@@ -285,11 +326,12 @@ function WorkInner() {
                 </div>
                 <ChatPanel
                   turns={helpTurns}
+                  extras={helpExtras}
                   onSend={help}
                   pending={helpPending}
                   pendingText="도우미가 코드를 읽고 있어요"
                   allowImages
-                  placeholder="현재 파일을 보고 답해요. 화면 캡처는 붙여넣기(⌘V)로 넣을 수 있어요."
+                  placeholder="코드를 고쳐 달라고 하면 에디터에 바로 반영돼요. 화면 캡처는 ⌘V로 붙여넣어요."
                   emptyText="필요하면 도우미에게 맡기세요. 무엇을 맡기고 무엇을 직접 확인했는지가 기록에 남고, 제출 뒤 그걸로 질문을 받습니다."
                   modelLabel="도우미"
                 />

@@ -3,8 +3,10 @@ import type { Report, ReviewItem, Session } from "../session/types";
 import { filterExisting } from "../session/evidence";
 import { applyCaps, scoreCaps } from "./scoreCaps";
 import { callJson, callText, type Turn } from "./gemini";
-import { assistantSystem, designQuestionsPrompt, followUpPrompt, reportPrompt, stakeholderSystem } from "./prompts";
+import { assistantSystem, designQuestionsPrompt, editNote, followUpPrompt, reportPrompt, stakeholderSystem } from "./prompts";
 import {
+  assistantReplyJsonSchema,
+  assistantReplySchema,
   designQuestionsJsonSchema,
   designQuestionsSchema,
   followUpJsonSchema,
@@ -24,10 +26,32 @@ export async function askStakeholder(task: Task, s: Session, question: string): 
   return callText("stakeholder", stakeholderSystem(task), turns);
 }
 
-export async function askCodingAssistant(s: Session, files: Record<string, string>, message: string, images: string[] = []): Promise<string> {
-  const turns: Turn[] = s.build.chat.map((c) => ({ role: c.role, text: c.text, images: c.images }));
+export type AssistantEdit = { path: string; content: string };
+
+/** 도우미가 준 파일 변경 중 적용할 수 있는 것만 남긴다: /src 아래 js·jsx·css, 내용이 실제로 바뀐 것. */
+export function sanitizeEdits(edits: AssistantEdit[], files: Record<string, string>): AssistantEdit[] {
+  const out = new Map<string, string>();
+  for (const e of edits) {
+    const raw = e.path.trim().replace(/\\/g, "/").replace(/^\/+/, "");
+    const path = `/${raw.startsWith("src/") ? raw : `src/${raw}`}`;
+    if (!/^\/src\/[\w./-]+\.(jsx?|css)$/.test(path) || path.split("/").some((seg) => seg === "..")) continue;
+    const content = e.content.endsWith("\n") ? e.content : `${e.content}\n`;
+    if (files[path] === content) continue;
+    out.set(path, content);
+  }
+  return [...out.entries()].map(([path, content]) => ({ path, content }));
+}
+
+export async function askCodingAssistant(
+  s: Session,
+  files: Record<string, string>,
+  message: string,
+  images: string[] = [],
+): Promise<{ reply: string; edits: AssistantEdit[] }> {
+  const turns: Turn[] = s.build.chat.map((c) => ({ role: c.role, text: c.text + editNote(c.edits), images: c.images }));
   turns.push({ role: "user", text: message || "(화면 캡처를 봐 주세요)", images });
-  return callText("assistant", assistantSystem(files), turns);
+  const out = await callJson("assistant", assistantSystem(files), turns, assistantReplyJsonSchema, (raw) => assistantReplySchema.parse(raw));
+  return { reply: out.reply, edits: sanitizeEdits(out.edits, files) };
 }
 
 export async function generateDesignQuestions(task: Task, s: Session): Promise<ReviewItem[]> {

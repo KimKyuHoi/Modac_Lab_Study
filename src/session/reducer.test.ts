@@ -1,13 +1,13 @@
-import { createSession, reduce, remainingQuestions } from "./reducer";
+import { QUESTION_LIMIT, createSession, reduce, remainingQuestions } from "./reducer";
 
 const T = "2026-11-04T00:00:00.000Z";
 
-test("createSession starts in clarify with 5 question limit", () => {
+test("createSession starts in clarify with 7 question limit", () => {
   const s = createSession("김규회", T);
   expect(s.phase).toBe("clarify");
-  expect(s.clarify.questionLimit).toBe(5);
+  expect(s.clarify.questionLimit).toBe(7);
   expect(s.candidateName).toBe("김규회");
-  expect(remainingQuestions(s)).toBe(5);
+  expect(remainingQuestions(s)).toBe(7);
 });
 
 test("qa/add assigns qa-1, qa-2 and counts down", () => {
@@ -15,20 +15,20 @@ test("qa/add assigns qa-1, qa-2 and counts down", () => {
   s = reduce(s, { type: "qa/add", question: "q1", answer: "a1", at: T });
   s = reduce(s, { type: "qa/add", question: "q2", answer: "a2", at: T });
   expect(s.clarify.qa.map((q) => q.id)).toEqual(["qa-1", "qa-2"]);
-  expect(remainingQuestions(s)).toBe(3);
+  expect(remainingQuestions(s)).toBe(QUESTION_LIMIT - 2);
 });
 
-test("qa/add beyond 5 is ignored", () => {
+test("qa/add beyond the limit is ignored", () => {
   let s = createSession("a", T);
-  for (let i = 0; i < 6; i++) s = reduce(s, { type: "qa/add", question: "q", answer: "a", at: T });
-  expect(s.clarify.qa).toHaveLength(5);
+  for (let i = 0; i < QUESTION_LIMIT + 1; i++) s = reduce(s, { type: "qa/add", question: "q", answer: "a", at: T });
+  expect(s.clarify.qa).toHaveLength(QUESTION_LIMIT);
   expect(remainingQuestions(s)).toBe(0);
 });
 
 test("remainingQuestions is unchanged when no qa/add is dispatched (failed call)", () => {
   const s = createSession("a", T);
   const same = reduce(s, { type: "spec/edit", text: "draft" });
-  expect(remainingQuestions(same)).toBe(5);
+  expect(remainingQuestions(same)).toBe(QUESTION_LIMIT);
 });
 
 test("spec/lock moves phase to build and stamps build.startedAt", () => {

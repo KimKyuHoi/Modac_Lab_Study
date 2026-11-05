@@ -1,5 +1,5 @@
 import { Button, Image, Input, Tooltip } from "antd";
-import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from "react";
 import type { Turn } from "../ai/gemini";
 import { imageFiles, toCompactDataUrl } from "./imageAttach";
 
@@ -17,9 +17,11 @@ type Props = {
   disabledText?: string;
   /** 화면 캡처 붙여넣기(⌘V)와 첨부 버튼을 켠다. */
   allowImages?: boolean;
+  /** turns와 같은 순서로, 메시지 아래에 덧붙일 내용(예: 도우미가 적용한 변경) */
+  extras?: (ReactNode | null)[];
 };
 
-export function ChatPanel({ turns, onSend, disabled, placeholder, emptyText, pending, pendingText, modelLabel, disabledText, allowImages }: Props) {
+export function ChatPanel({ turns, onSend, disabled, placeholder, emptyText, pending, pendingText, modelLabel, disabledText, allowImages, extras }: Props) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -117,6 +119,7 @@ export function ChatPanel({ turns, onSend, disabled, placeholder, emptyText, pen
                 {t.text}
               </div>
             )}
+            {extras?.[i]}
           </div>
         ))}
         {pending && (

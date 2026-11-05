@@ -7,7 +7,7 @@ import {
   useSandpack,
 } from "@codesandbox/sandpack-react";
 import type { SandpackTheme } from "@codesandbox/sandpack-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { newFilePath, starterContent } from "./newFilePath";
 import { candidateFiles } from "../session/files";
 
@@ -114,7 +114,27 @@ function NewFile() {
   );
 }
 
-export function SandpackWorkbench({ files, visibleFiles, activeFile, onFilesChange, previewFooter }: { files: Files; visibleFiles: string[]; activeFile: string; onFilesChange: (files: Files) => void; previewFooter?: ReactNode }) {
+/** 바깥(작업 화면)에서 에디터 파일을 바꿀 때 쓰는 손잡이. 도우미가 직접 고친 코드를 반영한다. */
+export type WorkbenchApi = { setFile: (path: string, code: string) => void; removeFile: (path: string) => void; openFile: (path: string) => void };
+
+function ApiBridge({ apiRef }: { apiRef: MutableRefObject<WorkbenchApi | null> }) {
+  const { sandpack } = useSandpack();
+  const sp = useRef(sandpack);
+  sp.current = sandpack;
+  useEffect(() => {
+    apiRef.current = {
+      setFile: (path, code) => sp.current.updateFile(path, code),
+      removeFile: (path) => sp.current.deleteFile(path),
+      openFile: (path) => sp.current.openFile(path),
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [apiRef]);
+  return null;
+}
+
+export function SandpackWorkbench({ files, visibleFiles, activeFile, onFilesChange, previewFooter, apiRef }: { files: Files; visibleFiles: string[]; activeFile: string; onFilesChange: (files: Files) => void; previewFooter?: ReactNode; apiRef?: MutableRefObject<WorkbenchApi | null> }) {
   return (
     <SandpackProvider
       template="react"
@@ -124,6 +144,7 @@ export function SandpackWorkbench({ files, visibleFiles, activeFile, onFilesChan
       style={{ height: "100%" }}
     >
       <FilesBridge onFilesChange={onFilesChange} />
+      {apiRef && <ApiBridge apiRef={apiRef} />}
       <SandpackLayout style={{ height: "100%", border: 0, borderRadius: 0 }}>
         <div style={{ height: "100%", minWidth: 150, flex: "0 0 150px", display: "flex", flexDirection: "column", background: "#1f1f1f" }}>
           <NewFile />

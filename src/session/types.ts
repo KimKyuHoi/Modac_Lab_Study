@@ -6,8 +6,10 @@ export type Phase = "clarify" | "build" | "review" | "done";
 export type EvidenceRef = string;
 
 export type QaTurn = { id: string; question: string; answer: string; at: string };
-/** images: 지원자가 붙여넣은 화면 캡처. 축소한 JPEG data URL. */
-export type ChatTurn = { id: string; role: "user" | "model"; text: string; at: string; images?: string[] };
+/** 도우미가 에디터에 직접 적용한 파일 변경. before가 null이면 새로 만든 파일. */
+export type AppliedEdit = { path: string; before: string | null; after: string; reverted?: boolean };
+/** images: 지원자가 붙여넣은 화면 캡처(축소한 JPEG data URL). edits: 도우미가 에디터에 바로 적용한 변경. */
+export type ChatTurn = { id: string; role: "user" | "model"; text: string; at: string; images?: string[]; edits?: AppliedEdit[] };
 export type Snapshot = { at: string; lines: Record<string, number> };
 /** 지원자가 성능 패널에서 "지금 수치 기록"을 누르거나 제출할 때 남는 측정값 */
 export type PerfRecord = { id: string; at: string; label: string; metrics: PerfMetrics };
