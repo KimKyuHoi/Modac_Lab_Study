@@ -1,8 +1,9 @@
 import { Drawer } from "antd";
+import { summarize } from "../perf/metrics";
 import { resolveRef } from "../session/evidence";
 import type { Session } from "../session/types";
 
-const TITLE = { qa: "실무진 Q&A", chat: "AI 도우미 대화", spec: "해결책 정의서", dq: "설계 질의", code: "제출 코드" } as const;
+const TITLE = { qa: "실무진 Q&A", chat: "AI 도우미 대화", spec: "해결책 정의서", dq: "설계 질의", code: "제출 코드", perf: "성능 측정" } as const;
 
 export function EvidenceDrawer({ session, refId, onClose }: { session: Session; refId: string | null; onClose: () => void }) {
   const ev = refId ? resolveRef(session, refId) : null;
@@ -28,6 +29,14 @@ export function EvidenceDrawer({ session, refId, onClose }: { session: Session; 
         <>
           <p style={{ fontWeight: 600, marginBottom: 12 }}>{ev.question}</p>
           <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0, lineHeight: 1.65 }}>{ev.answer ?? "(무응답)"}</pre>
+        </>
+      )}
+      {ev?.kind === "perf" && (
+        <>
+          <div className="muted" style={{ fontSize: 13, marginBottom: 6 }}>
+            {ev.label} · {new Date(ev.at).toLocaleTimeString()}
+          </div>
+          <p className="prose">{summarize(ev.metrics)}</p>
         </>
       )}
       {ev?.kind === "code" && (

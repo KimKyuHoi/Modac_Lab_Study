@@ -43,7 +43,7 @@ export function ResizeHandle({ onDelta, label }: { onDelta: (dx: number) => void
         if (e.key === "ArrowLeft") onDelta(-24);
         if (e.key === "ArrowRight") onDelta(24);
       }}
-      style={{ width: 6, cursor: "col-resize", background: "var(--line)", flexShrink: 0 }}
+      className="resize-handle"
     />
   );
 }

@@ -33,7 +33,8 @@ export function ReportPage() {
 
   useEffect(() => {
     if (s) {
-      setFinals(s.report?.interviewer?.finalScores ?? Object.fromEntries((s.report?.competencies ?? []).map((c) => [c.key, c.draftScore])));
+      // 확정 점수는 면접관이 직접 고른다. AI 초안을 미리 채우면 그대로 넘기기 쉽다.
+      setFinals(s.report?.interviewer?.finalScores ?? {});
       setNotes(s.report?.interviewer?.notes ?? "");
       return;
     }
@@ -100,7 +101,7 @@ export function ReportPage() {
           <span className="muted">{new Date(s.startedAt).toLocaleString("ko-KR")} 시작</span>
         </div>
         <p className="muted" style={{ marginBottom: 36 }}>
-          실무진 질문 {s.clarify.qa.length}/{s.clarify.questionLimit}회, 도우미 대화 {s.build.chat.filter((c) => c.role === "user").length}회, 체크리스트 {passed}/{r.checklist.length} 통과. 점수는 초안이고 대괄호 안이 근거입니다. 눌러서 원문을 확인하세요.
+          실무진 질문 {s.clarify.qa.length}/{s.clarify.questionLimit}회, 도우미 대화 {s.build.chat.filter((c) => c.role === "user").length}회, 체크리스트 {passed}/{r.checklist.length} 통과. AI 점수는 초안이고, 확정 점수는 면접관이 직접 고릅니다. 대괄호 안이 근거예요.
         </p>
 
         <section style={{ marginBottom: 48 }}>
@@ -118,6 +119,7 @@ export function ReportPage() {
                 onFinalChange={(v) => setFinals((f) => ({ ...f, [c.key]: v }))}
                 onOpen={setOpenRef}
                 locked={locked}
+                capped={c.capped}
               />
             ))}
           </div>
@@ -148,7 +150,7 @@ export function ReportPage() {
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
             {r.checklist.map((c, i) => (
               <li key={i} style={{ display: "grid", gridTemplateColumns: "28px 1fr", gap: 8, padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
-                <span style={{ fontWeight: 700, color: c.passed ? "var(--moss)" : "var(--pink)" }}>{c.passed ? "통과" : "미흡"}</span>
+                <span style={{ fontWeight: 700, color: c.passed ? "var(--moss)" : "var(--warn)" }}>{c.passed ? "통과" : "미흡"}</span>
                 <span>
                   {c.item}{" "}
                   {c.evidence.map((e) => (

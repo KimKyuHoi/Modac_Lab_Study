@@ -5,7 +5,7 @@ export const tokens = {
   paper: "#FFFFFF",
   frost: "#F2F4F7",
   line: "#D9DEE5",
-  pink: "#F23D97",
+  accent: "#2B6FD6",
   moss: "#2F7D5B",
   muted: "#5B6673",
 } as const;

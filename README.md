@@ -14,7 +14,7 @@ cp .env.example .env.local   # VITE_GEMINI_API_KEY에 Google AI Studio 키를 �
 npm run dev                  # http://localhost:5173
 ```
 
-키는 브라우저에서 그대로 쓰입니다. 로컬 데모 전용이며 배포하지 마세요. 모델은 `VITE_GEMINI_MODEL`로 바꿀 수 있고 기본값은 `gemini-flash-latest`입니다.
+키는 브라우저에서 그대로 쓰입니다. 로컬 데모 전용이며 배포하지 마세요. 모델은 역할별로 `VITE_GEMINI_MODEL_STAKEHOLDER`(AI 실무진), `VITE_GEMINI_MODEL_ASSISTANT`(코딩 도우미), `VITE_GEMINI_MODEL_JUDGE`(설계 질의·채점)로 정합니다. 비어 있으면 `VITE_GEMINI_MODEL`, 그다음 `gemini-3.6-flash`를 씁니다. 자세한 설명은 `.env.example`을 보세요.
 
 ## 흐름
 
@@ -51,6 +51,6 @@ Gemini 호출은 테스트에서 mock입니다. UI는 전체 루프 1회 완주,
 
 ## 범위 밖
 
-- 채용담당자의 과제 생성·검수 화면 (과제 1개는 `src/task/bannerSchedule.ts`에 손으로 작성)
+- 채용담당자의 과제 생성·검수 화면 (과제는 `src/task/videoSearch.ts`에 손으로 작성하고, 내는 과제는 `src/task/index.ts`의 `currentTask`로 고른다)
 - 히든 테스트 자동 실행 (대신 리포트 생성 시 체크리스트 5개를 모델이 점검)
 - 로그인, 배포, 부정행위 방지

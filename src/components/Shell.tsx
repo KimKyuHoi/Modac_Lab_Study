@@ -12,17 +12,18 @@ export function Shell({ step, right, children, wide }: { step?: number; right?: 
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
       <header
+        className="shell-header"
         style={{
           display: "flex",
           alignItems: "center",
           gap: 24,
           padding: "0 24px",
           height: 52,
-          borderBottom: "1px solid var(--line)",
           flexShrink: 0,
         }}
       >
-        <Link to={home} style={{ color: "var(--ink)", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+        <Link to={home} style={{ fontWeight: 700, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
+          <span aria-hidden style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--accent)" }} />
           AI 활용 과제 평가
         </Link>
         {step !== undefined && (
@@ -34,7 +35,7 @@ export function Shell({ step, right, children, wide }: { step?: number; right?: 
                   key={name}
                   aria-current={state === "now" ? "step" : undefined}
                   style={{
-                    color: state === "now" ? "var(--ink)" : "var(--muted)",
+                    color: state === "now" ? "#fff" : "var(--chrome-muted)",
                     fontWeight: state === "now" ? 700 : 400,
                     textDecoration: state === "done" ? "line-through" : "none",
                   }}

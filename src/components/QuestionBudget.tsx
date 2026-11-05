@@ -14,15 +14,15 @@ export function QuestionBudget({ total, used }: { total: number; used: number })
                 width: 12,
                 height: 12,
                 borderRadius: "50%",
-                border: "2px solid var(--pink)",
-                background: full ? "var(--pink)" : "transparent",
+                border: "2px solid var(--accent)",
+                background: full ? "var(--accent)" : "transparent",
                 transition: "background 150ms ease",
               }}
             />
           );
         })}
       </div>
-      <span style={{ fontSize: 14, color: remaining === 0 ? "var(--pink)" : "var(--muted)" }}>
+      <span style={{ fontSize: 14, color: remaining === 0 ? "var(--warn)" : "var(--muted)" }}>
         {remaining === 0 ? "질문을 다 썼어요" : `질문 ${remaining}번 남음`}
       </span>
     </div>

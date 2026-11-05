@@ -1,6 +1,7 @@
 import { Button, Input } from "antd";
 import { useState } from "react";
 import type { ReviewItem } from "../session/types";
+import { refLabel } from "./RecordViewer";
 
 type Props = {
   item: ReviewItem;
@@ -10,11 +11,13 @@ type Props = {
   judging?: boolean;
   onAnswer: (text: string) => void;
   onAnswerFollowUp: (text: string) => void;
+  /** 근거 칩을 누르면 오른쪽 기록에서 그 위치를 연다 */
+  onOpenRef?: (ref: string) => void;
 };
 
 const KIND_LABEL = { ai_direction: "AI에게 시킨 것에 대해", design: "설계 결정에 대해", extend: "확장한다면" } as const;
 
-export function DesignQuestionCard({ item, index, active, busy, judging, onAnswer, onAnswerFollowUp }: Props) {
+export function DesignQuestionCard({ item, index, active, busy, judging, onAnswer, onAnswerFollowUp, onOpenRef }: Props) {
   const [text, setText] = useState("");
   const [followText, setFollowText] = useState("");
   const needsFollowUp = !!item.followUp && item.followUp.answer === undefined;
@@ -23,7 +26,7 @@ export function DesignQuestionCard({ item, index, active, busy, judging, onAnswe
     <section
       aria-current={active ? "step" : undefined}
       style={{
-        borderLeft: active ? "4px solid var(--pink)" : "4px solid var(--line)",
+        borderLeft: active ? "4px solid var(--accent)" : "4px solid var(--line)",
         padding: "16px 20px",
         marginBottom: 20,
         opacity: active || item.answer !== undefined ? 1 : 0.5,
@@ -33,6 +36,15 @@ export function DesignQuestionCard({ item, index, active, busy, judging, onAnswe
         {index + 1}. {KIND_LABEL[item.kind]}
       </div>
       <p style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.55, maxWidth: "70ch" }}>{item.question}</p>
+      {item.evidence.length > 0 && onOpenRef && (
+        <div className="ref-chips" aria-label="이 질문의 근거">
+          {item.evidence.map((r) => (
+            <button key={r} type="button" onClick={() => onOpenRef(r)}>
+              {refLabel(r)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {item.answer !== undefined ? (
         <>
@@ -40,7 +52,7 @@ export function DesignQuestionCard({ item, index, active, busy, judging, onAnswe
             {item.answer}
           </p>
           {judging && (
-            <p style={{ marginTop: 8, fontSize: 13, color: "var(--pink)" }}>답변을 읽고 있어요</p>
+            <p style={{ marginTop: 8, fontSize: 13, color: "var(--accent)" }}>답변을 읽고 있어요</p>
           )}
         </>
       ) : (
@@ -50,7 +62,7 @@ export function DesignQuestionCard({ item, index, active, busy, judging, onAnswe
               value={text}
               onChange={(e) => setText(e.target.value)}
               autoSize={{ minRows: 5, maxRows: 14 }}
-              placeholder="코드의 어느 부분이 어떻게 동작하는지, 왜 그렇게 정했는지를 적으세요."
+              placeholder="오른쪽에서 코드와 기록을 보며, 어느 부분이 어떻게 동작하고 왜 그렇게 정했는지 적으세요."
               aria-label={`${index + 1}번 답변`}
               disabled={busy}
             />
@@ -64,7 +76,7 @@ export function DesignQuestionCard({ item, index, active, busy, judging, onAnswe
       )}
 
       {item.followUp && (
-        <div style={{ marginTop: 16, paddingLeft: 14, borderLeft: "2px solid var(--pink)" }}>
+        <div style={{ marginTop: 16, paddingLeft: 14, borderLeft: "2px solid var(--accent)" }}>
           <div className="muted" style={{ fontSize: 13, marginBottom: 4 }}>
             꼬리질문
           </div>

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { createSession, reduce, type Action } from "./reducer";
 import { loadCurrent, saveFile, saveLocal } from "./persist";
 import type { Session } from "./types";
+import { currentTask } from "../task";
 
 type Store = {
   session: Session | null;
@@ -15,8 +16,14 @@ type Store = {
 
 const Ctx = createContext<Store | null>(null);
 
+/** 과제가 바뀐 뒤에는 이전 과제로 진행 중이던 세션을 이어 열지 않는다. 그 세션은 세션 목록에는 남는다. */
+function resumable(s: Session | null): Session | null {
+  if (s && s.phase !== "done" && s.taskId !== currentTask.id) return null;
+  return s;
+}
+
 export function SessionProvider({ children, initial }: { children: ReactNode; initial?: Session | null }) {
-  const [session, setSession] = useState<Session | null>(() => initial ?? loadCurrent());
+  const [session, setSession] = useState<Session | null>(() => (initial !== undefined ? initial : resumable(loadCurrent())));
   // 연속 dispatch가 같은 렌더 안에서 일어나도 최신 상태를 기준으로 줄이도록 ref를 쓴다.
   const latest = useRef(session);
   latest.current = session;

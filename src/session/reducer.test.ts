@@ -88,3 +88,30 @@ test("report/set moves to done and report/confirm stores interviewer", () => {
   s = reduce(s, { type: "report/confirm", finalScores: { requirements: 4 }, notes: "ok", at: T });
   expect(s.report?.interviewer).toEqual({ finalScores: { requirements: 4 }, notes: "ok", confirmedAt: T });
 });
+
+test("chat/add keeps attached images and omits the field when there are none", async () => {
+  const { createSession, reduce } = await import("./reducer");
+  let s = createSession("이미지", "2026-11-05T00:00:00.000Z");
+  s = reduce(s, { type: "chat/add", role: "user", text: "봐 주세요", images: ["data:image/jpeg;base64,QUJD"], at: "2026-11-05T00:01:00.000Z" });
+  s = reduce(s, { type: "chat/add", role: "model", text: "네", at: "2026-11-05T00:01:05.000Z" });
+  expect(s.build.chat[0].images).toEqual(["data:image/jpeg;base64,QUJD"]);
+  expect("images" in s.build.chat[1]).toBe(false);
+});
+
+test("perf/record numbers records and resolves them as evidence", async () => {
+  const { emptyPerf, toMetrics } = await import("../perf/metrics");
+  const { resolveRef, listRefIds } = await import("./evidence");
+  let s = createSession("측정", T);
+  s = reduce(s, { type: "perf/record", at: T, label: "측정 1", metrics: toMetrics({ ...emptyPerf(), blockingMs: 1200 }) });
+  s = reduce(s, { type: "perf/record", at: T, label: "측정 2", metrics: toMetrics({ ...emptyPerf(), blockingMs: 80 }) });
+  expect(s.build.perf?.map((r) => r.id)).toEqual(["perf-1", "perf-2"]);
+  expect(listRefIds(s)).toEqual(expect.arrayContaining(["perf-1", "perf-2"]));
+  expect(resolveRef(s, "perf-2")).toMatchObject({ kind: "perf", label: "측정 2" });
+});
+
+test("perf/record works on sessions saved before perf existed", () => {
+  const old = createSession("옛 세션", T);
+  delete (old.build as { perf?: unknown }).perf;
+  const s = reduce(old, { type: "perf/record", at: T, label: "측정 1", metrics: { commits: 0, lastCommitMs: 0, maxCommitMs: 0, longTasks: 0, maxLongTaskMs: 0, blockingMs: 0, maxInputMs: 0, lcpMs: null, domNodes: 0, apiCalls: 0, api429: 0, slowdown: 1 } });
+  expect(s.build.perf).toHaveLength(1);
+});

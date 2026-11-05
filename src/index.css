@@ -3,9 +3,19 @@
   --paper: #ffffff;
   --frost: #f2f4f7;
   --line: #d9dee5;
-  --pink: #f23d97;
+  --accent: #2b6fd6;
+  --warn: #c2410c;
   --moss: #2f7d5b;
   --muted: #5b6673;
+  /* 작업 화면 프레임: 상단바, 패널 제목 줄, 에디터 */
+  --chrome: #181818;
+  --chrome-2: #1f1f1f;
+  --chrome-line: #2b2b2b;
+  --chrome-text: #d4d4d4;
+  --chrome-muted: #8b8b8b;
+  /* 좌우 패널 바탕. 순백 대신 차가운 회색 */
+  --panel: #eef1f5;
+  --panel-line: #d3dae3;
 }
 html, body, #root { height: 100%; margin: 0; }
 body {
@@ -24,10 +34,107 @@ p { margin: 0; max-width: 70ch; }
 .rail { border-left: 1px solid var(--line); }
 .hr { border: 0; border-top: 1px solid var(--line); margin: 0; }
 .muted { color: var(--muted); }
-:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 /* 우측 레일 탭 본문이 남은 높이를 다 쓰도록 */
 .rail .ant-tabs-content-holder, .rail-left .ant-tabs-content-holder { flex: 1; min-height: 0; }
 .rail .ant-tabs-content, .rail .ant-tabs-tabpane, .rail-left .ant-tabs-content, .rail-left .ant-tabs-tabpane { height: 100%; }
+
+/* 상단바 */
+.shell-header { background: var(--chrome); color: var(--chrome-text); }
+.shell-header a { color: var(--chrome-text); text-decoration: none; }
+.shell-header a:hover { color: #fff; }
+.shell-header .muted { color: var(--chrome-muted); }
+
+/* 작업 화면 패널 */
+.panel { background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+.panel-bar {
+  height: 40px; flex-shrink: 0; display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; background: var(--chrome-2); color: var(--chrome-text);
+  font-size: 13px; font-weight: 700; border-bottom: 1px solid var(--chrome-line);
+}
+.panel-bar .muted { color: var(--chrome-muted); font-weight: 400; }
+.chat-compose { border-top: 1px solid var(--line); }
+.panel .chat-compose { background: var(--paper); border-top: 1px solid var(--panel-line); }
+
+/* 에디터 오른쪽에 붙는 어두운 사이드바(AI 도우미). 같은 변수를 어두운 값으로 덮어 ChatPanel을 그대로 쓴다. */
+.panel-dark {
+  --paper: #252526; --ink: #d4d4d4; --muted: #8b8b8b; --line: #2b2b2b;
+  --panel-line: #2b2b2b; --chrome-2: #264f78; --chrome-text: #ffffff;
+  background: #1f1f1f; color: var(--ink);
+}
+.panel-dark .panel-bar { background: #181818; }
+.panel-dark .chat-compose { background: #1f1f1f; border-top-color: #2b2b2b; }
+
+/* 에디터 아래 상태바 */
+.status-bar {
+  height: 24px; flex-shrink: 0; display: flex; align-items: center; gap: 16px; padding: 0 12px;
+  background: var(--accent); color: #fff; font-size: 12px;
+}
+.status-bar .push { margin-left: auto; }
+
+/* 패널 사이 드래그 손잡이 */
+.resize-handle { width: 4px; flex-shrink: 0; cursor: col-resize; background: var(--chrome-line); transition: background 120ms ease; }
+.resize-handle:hover, .resize-handle:focus-visible { background: var(--accent); outline: none; }
+
+/* 문제 영역 */
+.brief { padding: 16px 16px 12px; border-bottom: 1px solid var(--panel-line); max-height: 48vh; overflow-y: auto; flex-shrink: 0; }
+.brief-request {
+  margin: 0 0 12px; padding: 12px 14px; background: var(--paper); border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0; font-size: 14px; line-height: 1.6;
+}
+.brief-profile { margin-bottom: 10px; padding: 10px 12px; background: var(--paper); border: 1px solid var(--panel-line); border-radius: 6px; }
+.brief-profile summary { cursor: pointer; font-size: 13px; font-weight: 700; }
+
+/* 파일 탐색기 위 새 파일 */
+.new-file-btn {
+  margin: 8px 8px 0; padding: 4px 8px; text-align: left; font-size: 12px; color: #cccccc;
+  background: transparent; border: 1px dashed #3c3c3c; border-radius: 4px; cursor: pointer;
+}
+.new-file-btn:hover { color: #fff; border-color: #6b6b6b; }
+.new-file-form { margin: 8px 8px 0; }
+.new-file-form input {
+  width: 100%; padding: 4px 6px; font-size: 12px; color: #e0e0e0; background: #252526;
+  border: 1px solid var(--accent); border-radius: 3px; outline: none;
+}
+.new-file-form p { margin: 4px 0 0; font-size: 11px; color: #f48771; }
+
+/* 설계 질의: 왼쪽 질문, 오른쪽 내 기록 */
+.review-layout { display: flex; height: calc(100vh - 52px); min-height: 0; }
+.review-questions { flex: 1 1 0; min-width: 0; overflow-y: auto; padding: 32px 32px 80px; }
+.review-records { flex: 0 0 min(52%, 760px); min-width: 0; border-left: 1px solid var(--chrome-line); }
+@media (max-width: 960px) {
+  .review-layout { flex-direction: column; height: auto; }
+  .review-records { flex-basis: auto; height: 70vh; border-left: 0; }
+}
+.ref-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ref-chips button {
+  font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 999px; cursor: pointer;
+  color: var(--accent); background: #eef4fd; border: 1px solid #cfe0f8;
+}
+.ref-chips button:hover { background: #e1ecfb; }
+
+.record-viewer { height: 100%; display: flex; flex-direction: column; background: #1f1f1f; color: #d4d4d4; }
+.rv-tabs, .rv-files { display: flex; gap: 2px; flex-shrink: 0; overflow-x: auto; background: #181818; border-bottom: 1px solid #2b2b2b; }
+.rv-tabs button, .rv-files button {
+  font: inherit; font-size: 13px; padding: 9px 14px; color: #9d9d9d; background: transparent; border: 0;
+  border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px;
+}
+.rv-files button { font-size: 12px; padding: 7px 12px; }
+.rv-tabs button.on, .rv-files button.on { color: #fff; border-bottom-color: var(--accent); }
+.rv-dot { width: 6px; height: 6px; border-radius: 50%; background: #dcdcaa; }
+.rv-body { flex: 1; min-height: 0; overflow: auto; }
+.rv-code { margin: 0; padding: 8px 0; font-family: "JetBrains Mono", "D2Coding", ui-monospace, Menlo, monospace; font-size: 13px; line-height: 20px; }
+.rv-line { display: flex; gap: 16px; padding: 0 16px 0 0; }
+.rv-line.hl { background: rgba(220, 220, 170, 0.08); }
+.rv-line.focus { background: rgba(43, 111, 214, 0.28); }
+.rv-ln { color: #6e7681; min-width: 44px; text-align: right; user-select: none; flex-shrink: 0; }
+.rv-line > span:last-child { white-space: pre; }
+.rv-item { padding: 14px 20px; border-bottom: 1px solid #2b2b2b; }
+.rv-item.focus { background: rgba(43, 111, 214, 0.18); }
+.rv-meta { font-size: 12px; color: #8b8b8b; margin-bottom: 4px; }
+.rv-q { margin: 0 0 6px; color: #fff; font-weight: 600; max-width: none; }
+.rv-a { margin: 0; color: #c8c8c8; line-height: 1.6; max-width: none; }
+.rv-empty { padding: 20px; color: #8b8b8b; }

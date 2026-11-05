@@ -1,5 +1,6 @@
-import { App as AntApp, Button } from "antd";
+import { App as AntApp, Button, Spin } from "antd";
 import { useEffect, useRef, useState } from "react";
+import { RecordViewer, type Focus } from "../components/RecordViewer";
 import { useNavigate } from "react-router-dom";
 import { generateDesignQuestions, generateReport, judgeFollowUp } from "../ai";
 import { DesignQuestionCard } from "../components/DesignQuestionCard";
@@ -8,7 +9,7 @@ import { PhaseTimer } from "../components/PhaseTimer";
 import { Shell } from "../components/Shell";
 import { useSession } from "../session/store";
 import type { ReviewItem } from "../session/types";
-import { bannerScheduleTask as task } from "../task/bannerSchedule";
+import { currentTask as task } from "../task";
 
 function isDone(i: ReviewItem): boolean {
   return i.answer !== undefined && (!i.followUp || i.followUp.answer !== undefined);
@@ -18,7 +19,7 @@ type Stage = "loading-questions" | "answering" | "generating-report" | "error";
 
 function ReviewInner() {
   const { session, current, dispatch, persistFile } = useSession();
-  const { message } = AntApp.useApp();
+  const { message, modal } = AntApp.useApp();
   const navigate = useNavigate();
   const s = session!;
   const [stage, setStage] = useState<Stage>(s.review.items.length ? "answering" : "loading-questions");
@@ -62,7 +63,6 @@ function ReviewInner() {
     if (started.current) return;
     started.current = true;
     if (s.review.items.length === 0) void loadQuestions();
-    else if (s.review.items.every(isDone)) void finish();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -88,31 +88,50 @@ function ReviewInner() {
     }
     setJudgingId(null);
     setBusy(false);
-    advance(afterAnswer?.review.items ?? items, item.id);
   };
 
   const answerFollowUp = (item: ReviewItem, text: string) => {
-    const next = dispatch({ type: "review/answerFollowUp", id: item.id, answer: text });
-    advance(next?.review.items ?? items, item.id);
+    dispatch({ type: "review/answerFollowUp", id: item.id, answer: text });
   };
 
-  const advance = (list: ReviewItem[], justId: string) => {
-    const remaining = list.filter((i) => i.id !== justId && !isDone(i));
-    if (remaining.length === 0) void finish();
+  const [focus, setFocus] = useState<Focus>(null);
+  const openRef = (ref: string) => setFocus((f) => ({ ref, n: (f?.n ?? 0) + 1 }));
+  const activeItem = activeIndex >= 0 ? items[activeIndex] : undefined;
+  // 다음 질문으로 넘어가면 그 질문의 첫 코드 근거를 자동으로 연다.
+  const shownFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (stage !== "answering" || !activeItem || shownFor.current === activeItem.id) return;
+    shownFor.current = activeItem.id;
+    const first = activeItem.evidence.find((r) => r.startsWith("code:")) ?? activeItem.evidence[0];
+    if (first) openRef(first);
+  }, [stage, activeItem]);
+
+  // 마지막 답을 저장해도 바로 리포트를 만들지 않는다. 응시자가 답을 다시 보고 최종 제출한다.
+  const allDone = items.length > 0 && items.every(isDone) && !judgingId;
+  const submitFinal = () => {
+    modal.confirm({
+      title: "최종 제출할까요?",
+      content: "제출하면 답변을 고칠 수 없고, 바로 리포트를 만들어요.",
+      okText: "최종 제출",
+      cancelText: "답변 다시 보기",
+      onOk: () => void finish(),
+    });
   };
 
   return (
-    <Shell step={1} right={<PhaseTimer startedAt={s.review.startedAt ?? s.startedAt} budgetMin={task.timeBudgetMin.review} overtimeText="시간이 지났어요. 답변은 계속할 수 있어요." />}>
-      <main style={{ padding: "40px 24px 80px", maxWidth: 860 }}>
-        <h1 style={{ marginBottom: 8 }}>당신의 기록과 코드를 읽고 세 가지를 묻습니다</h1>
-        <p className="muted" style={{ marginBottom: 32 }}>
-          AI에게 시킨 것, 설계 결정, 확장 설계에 대해 하나씩. 답이 모호하면 꼬리질문이 한 번 더 붙습니다. 코드는 다시 볼 수 없으니 기억을 바탕으로 적으세요.
-        </p>
+    <Shell step={1} wide right={<PhaseTimer startedAt={s.review.startedAt ?? s.startedAt} budgetMin={task.timeBudgetMin.review} overtimeText="시간이 지났어요. 답변은 계속할 수 있어요." />}>
+      <div className="review-layout">
+      <main className="review-questions">
+        <h1 style={{ marginBottom: 24 }}>설계 질의</h1>
 
-        {stage === "loading-questions" && <p className="muted">실무진 질문, 도우미 대화, 제출 코드를 읽고 당신에게 맞는 질문을 만들고 있어요.</p>}
-        {stage === "generating-report" && <p className="muted">기록 전체를 읽고 리포트를 쓰고 있어요. 1분쯤 걸릴 수 있어요.</p>}
+        {stage === "loading-questions" && <Spin aria-label="질문을 만드는 중" />}
+        {stage === "generating-report" && (
+          <p className="muted" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Spin size="small" /> 리포트를 쓰고 있어요
+          </p>
+        )}
         {stage === "error" && (
-          <div style={{ padding: 16, border: "1px solid var(--pink)", borderRadius: 4, marginBottom: 24 }}>
+          <div style={{ padding: 16, border: "1px solid var(--accent)", borderRadius: 4, marginBottom: 24 }}>
             <p style={{ marginBottom: 12 }}>{error}</p>
             <Button type="primary" onClick={() => (items.length === 0 ? loadQuestions() : finish())}>
               다시 시도
@@ -130,9 +149,21 @@ function ReviewInner() {
             judging={judgingId === item.id}
             onAnswer={(t) => void answer(item, t)}
             onAnswerFollowUp={(t) => answerFollowUp(item, t)}
+            onOpenRef={openRef}
           />
         ))}
+        {stage === "answering" && allDone && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+            <Button type="primary" size="large" onClick={submitFinal}>
+              최종 제출
+            </Button>
+          </div>
+        )}
       </main>
+      <aside className="review-records" aria-label="내 기록">
+        <RecordViewer session={s} focus={focus} highlightRefs={activeItem?.evidence ?? []} />
+      </aside>
+      </div>
     </Shell>
   );
 }

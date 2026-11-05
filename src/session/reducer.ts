@@ -1,4 +1,6 @@
 import { ulid } from "ulid";
+import { currentTask } from "../task";
+import type { PerfMetrics } from "../perf/metrics";
 import type { Report, ReviewItem, Session } from "./types";
 
 export const QUESTION_LIMIT = 5;
@@ -7,8 +9,9 @@ export type Action =
   | { type: "qa/add"; question: string; answer: string; at: string }
   | { type: "spec/edit"; text: string }
   | { type: "spec/lock"; at: string }
-  | { type: "chat/add"; role: "user" | "model"; text: string; at: string }
+  | { type: "chat/add"; role: "user" | "model"; text: string; at: string; images?: string[] }
   | { type: "snapshot/add"; at: string; lines: Record<string, number> }
+  | { type: "perf/record"; at: string; label: string; metrics: PerfMetrics }
   | { type: "files/set"; files: Record<string, string> }
   | { type: "build/submit"; at: string }
   | { type: "review/setItems"; items: ReviewItem[] }
@@ -22,11 +25,11 @@ export function createSession(candidateName: string, now: string = new Date().to
   return {
     id: ulid(),
     candidateName,
-    taskId: "banner-schedule",
+    taskId: currentTask.id,
     phase: "clarify",
     startedAt: now,
     clarify: { qa: [], questionLimit: QUESTION_LIMIT, spec: { text: "" } },
-    build: { chat: [], snapshots: [], files: {} },
+    build: { chat: [], snapshots: [], perf: [], files: {} },
     review: { items: [] },
   };
 }
@@ -56,9 +59,14 @@ export function reduce(s: Session, a: Action): Session {
         clarify: { ...s.clarify, spec: { ...s.clarify.spec, lockedAt: a.at } },
         build: { ...s.build, startedAt: a.at },
       };
+    case "perf/record": {
+      const perf = s.build.perf ?? [];
+      const id = `perf-${perf.length + 1}`;
+      return { ...s, build: { ...s.build, perf: [...perf, { id, at: a.at, label: a.label, metrics: a.metrics }] } };
+    }
     case "chat/add": {
       const id = `chat-${s.build.chat.length + 1}`;
-      return { ...s, build: { ...s.build, chat: [...s.build.chat, { id, role: a.role, text: a.text, at: a.at }] } };
+      return { ...s, build: { ...s.build, chat: [...s.build.chat, { id, role: a.role, text: a.text, at: a.at, ...(a.images?.length ? { images: a.images } : {}) }] } };
     }
     case "snapshot/add":
       return { ...s, build: { ...s.build, snapshots: [...s.build.snapshots, { at: a.at, lines: a.lines }] } };
