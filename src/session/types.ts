@@ -1,11 +1,18 @@
+import type { PerfMetrics } from "../perf/metrics";
+
 export type Phase = "clarify" | "build" | "review" | "done";
 
 /** "qa-3" | "chat-12" | "spec" | "dq-1" | "code:src/App.jsx:40-52" */
 export type EvidenceRef = string;
 
 export type QaTurn = { id: string; question: string; answer: string; at: string };
-export type ChatTurn = { id: string; role: "user" | "model"; text: string; at: string };
+/** 도우미가 에디터에 직접 적용한 파일 변경. before가 null이면 새로 만든 파일. */
+export type AppliedEdit = { path: string; before: string | null; after: string; reverted?: boolean };
+/** images: 지원자가 붙여넣은 화면 캡처(축소한 JPEG data URL). edits: 도우미가 에디터에 바로 적용한 변경. */
+export type ChatTurn = { id: string; role: "user" | "model"; text: string; at: string; images?: string[]; edits?: AppliedEdit[] };
 export type Snapshot = { at: string; lines: Record<string, number> };
+/** 지원자가 성능 패널에서 "지금 수치 기록"을 누르거나 제출할 때 남는 측정값 */
+export type PerfRecord = { id: string; at: string; label: string; metrics: PerfMetrics };
 
 export type ReviewItem = {
   id: string;
@@ -24,6 +31,8 @@ export type Competency = {
   draftScore: 1 | 2 | 3 | 4 | 5;
   rationale: string;
   evidence: EvidenceRef[];
+  /** 기록으로 확인되는 상한 때문에 AI 점수를 깎았을 때 */
+  capped?: { from: number; reasons: string[] };
 };
 
 export type ChecklistResult = { item: string; passed: boolean; evidence: EvidenceRef[] };
@@ -43,7 +52,7 @@ export type Report = {
 export type Session = {
   id: string;
   candidateName: string;
-  taskId: "banner-schedule";
+  taskId: string;
   phase: Phase;
   startedAt: string;
   clarify: {
@@ -55,6 +64,8 @@ export type Session = {
     startedAt?: string;
     chat: ChatTurn[];
     snapshots: Snapshot[];
+    /** 이전 버전 세션에는 없을 수 있다 */
+    perf?: PerfRecord[];
     files: Record<string, string>;
     submittedAt?: string;
   };
@@ -69,6 +80,6 @@ export const COMPETENCY_LABELS: Record<CompetencyKey, string> = {
   requirements: "요구사항 구체화",
   implementation: "구현 품질",
   ai_usage: "AI 활용",
-  understanding: "구조 이해",
+  understanding: "판단 근거 (왜)",
   extension: "확장 설계",
 };

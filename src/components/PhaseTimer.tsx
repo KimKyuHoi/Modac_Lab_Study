@@ -17,8 +17,8 @@ export function PhaseTimer({ startedAt, budgetMin, overtimeText = "시간이 지
   const over = elapsed > budget;
   return (
     <div style={{ display: "flex", alignItems: "baseline", gap: 10, fontVariantNumeric: "tabular-nums" }} role="timer">
-      <span style={{ fontWeight: 700, color: over ? "var(--pink)" : "var(--ink)" }}>{over ? `${fmt(elapsed - budget)} 초과` : `${fmt(budget - elapsed)} 남음`}</span>
-      {over && <span style={{ fontSize: 13, color: "var(--pink)" }}>{overtimeText}</span>}
+      <span style={{ fontWeight: 700, color: over ? "var(--warn)" : "inherit" }}>{over ? `${fmt(elapsed - budget)} 초과` : `${fmt(budget - elapsed)} 남음`}</span>
+      {over && <span style={{ fontSize: 13, color: "var(--warn)" }}>{overtimeText}</span>}
     </div>
   );
 }

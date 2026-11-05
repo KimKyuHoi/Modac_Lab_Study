@@ -6,10 +6,45 @@ import {
   SandpackProvider,
   useSandpack,
 } from "@codesandbox/sandpack-react";
-import { useEffect, useRef } from "react";
+import type { SandpackTheme } from "@codesandbox/sandpack-react";
+import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from "react";
+import { newFilePath, starterContent } from "./newFilePath";
 import { candidateFiles } from "../session/files";
 
 type Files = Record<string, string>;
+
+// VS Code 다크 계열. 미리보기는 응시자가 만드는 화면이라 흰 바탕 그대로 둔다.
+const editorTheme: SandpackTheme = {
+  colors: {
+    surface1: "#1f1f1f",
+    surface2: "#2b2b2b",
+    surface3: "#2a2d2e",
+    clickable: "#9d9d9d",
+    base: "#d4d4d4",
+    disabled: "#5a5a5a",
+    hover: "#ffffff",
+    accent: "#4fa3ff",
+    error: "#f48771",
+    errorSurface: "#3a1d1d",
+  },
+  syntax: {
+    plain: "#d4d4d4",
+    comment: { color: "#6a9955", fontStyle: "italic" },
+    keyword: "#c586c0",
+    tag: "#569cd6",
+    punctuation: "#d4d4d4",
+    definition: "#dcdcaa",
+    property: "#9cdcfe",
+    static: "#b5cea8",
+    string: "#ce9178",
+  },
+  font: {
+    body: '"Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif',
+    mono: '"JetBrains Mono", "D2Coding", ui-monospace, SFMono-Regular, Menlo, monospace',
+    size: "13.5px",
+    lineHeight: "21px",
+  },
+};
 
 function FilesBridge({ onFilesChange }: { onFilesChange: (files: Files) => void }) {
   const { sandpack } = useSandpack();
@@ -26,20 +61,100 @@ function FilesBridge({ onFilesChange }: { onFilesChange: (files: Files) => void 
   return null;
 }
 
-export function SandpackWorkbench({ files, visibleFiles, activeFile, onFilesChange }: { files: Files; visibleFiles: string[]; activeFile: string; onFilesChange: (files: Files) => void }) {
+/** 파일 탐색기 위의 "새 파일" 입력. Sandpack 탐색기는 파일 만들기를 지원하지 않아 따로 둔다. */
+function NewFile() {
+  const { sandpack } = useSandpack();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const create = () => {
+    const r = newFilePath(name, Object.keys(sandpack.files));
+    if ("error" in r) {
+      setError(r.error);
+      return;
+    }
+    sandpack.updateFile(r.path, starterContent(r.path));
+    sandpack.openFile(r.path);
+    setOpen(false);
+    setName("");
+    setError(null);
+  };
+
+  if (!open) {
+    return (
+      <button type="button" className="new-file-btn" onClick={() => setOpen(true)}>
+        + 새 파일
+      </button>
+    );
+  }
+  return (
+    <form
+      className="new-file-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        create();
+      }}
+    >
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => {
+          setName(e.target.value);
+          setError(null);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setOpen(false);
+        }}
+        placeholder="useDebounce.js"
+        aria-label="새 파일 이름 (src 아래)"
+      />
+      {error && <p role="alert">{error}</p>}
+    </form>
+  );
+}
+
+/** 바깥(작업 화면)에서 에디터 파일을 바꿀 때 쓰는 손잡이. 도우미가 직접 고친 코드를 반영한다. */
+export type WorkbenchApi = { setFile: (path: string, code: string) => void; removeFile: (path: string) => void; openFile: (path: string) => void };
+
+function ApiBridge({ apiRef }: { apiRef: MutableRefObject<WorkbenchApi | null> }) {
+  const { sandpack } = useSandpack();
+  const sp = useRef(sandpack);
+  sp.current = sandpack;
+  useEffect(() => {
+    apiRef.current = {
+      setFile: (path, code) => sp.current.updateFile(path, code),
+      removeFile: (path) => sp.current.deleteFile(path),
+      openFile: (path) => sp.current.openFile(path),
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [apiRef]);
+  return null;
+}
+
+export function SandpackWorkbench({ files, visibleFiles, activeFile, onFilesChange, previewFooter, apiRef }: { files: Files; visibleFiles: string[]; activeFile: string; onFilesChange: (files: Files) => void; previewFooter?: ReactNode; apiRef?: MutableRefObject<WorkbenchApi | null> }) {
   return (
     <SandpackProvider
       template="react"
       files={files}
       options={{ visibleFiles, activeFile, recompileMode: "delayed", recompileDelay: 600 }}
-      theme="light"
+      theme={editorTheme}
       style={{ height: "100%" }}
     >
       <FilesBridge onFilesChange={onFilesChange} />
+      {apiRef && <ApiBridge apiRef={apiRef} />}
       <SandpackLayout style={{ height: "100%", border: 0, borderRadius: 0 }}>
-        <SandpackFileExplorer autoHiddenFiles style={{ height: "100%", minWidth: 150, flex: "0 0 150px" }} />
+        <div style={{ height: "100%", minWidth: 150, flex: "0 0 150px", display: "flex", flexDirection: "column", background: "#1f1f1f" }}>
+          <NewFile />
+          <SandpackFileExplorer autoHiddenFiles style={{ flex: 1, minHeight: 0 }} />
+        </div>
         <SandpackCodeEditor showLineNumbers showTabs closableTabs={false} showInlineErrors style={{ height: "100%", flex: 1, minWidth: 0 }} />
-        <SandpackPreview showOpenInCodeSandbox={false} showRefreshButton style={{ height: "100%", flex: "0 0 38%", minWidth: 320 }} />
+        <div style={{ height: "100%", flex: "0 0 38%", minWidth: 320, display: "flex", flexDirection: "column" }}>
+          <SandpackPreview showOpenInCodeSandbox={false} showRefreshButton style={{ flex: 1, minHeight: 0 }} />
+          {previewFooter}
+        </div>
       </SandpackLayout>
     </SandpackProvider>
   );

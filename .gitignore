@@ -6,3 +6,5 @@ dist
 data/sessions/*
 !data/sessions/.gitkeep
 !data/sessions/sample-*.json
+.env
+*.tsbuildinfo

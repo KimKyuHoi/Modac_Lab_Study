@@ -1,7 +1,8 @@
+import type { PerfMetrics } from "../perf/metrics";
 import type { Session } from "./types";
 
 export type ParsedRef =
-  | { kind: "qa" | "chat" | "dq" | "spec"; id: string }
+  | { kind: "qa" | "chat" | "dq" | "perf" | "spec"; id: string }
   | { kind: "code"; id: string; path: string; from: number; to: number };
 
 export type ResolvedEvidence =
@@ -9,15 +10,16 @@ export type ResolvedEvidence =
   | { kind: "chat"; id: string; role: string; text: string }
   | { kind: "spec"; id: "spec"; text: string }
   | { kind: "dq"; id: string; question: string; answer?: string }
+  | { kind: "perf"; id: string; at: string; label: string; metrics: PerfMetrics }
   | { kind: "code"; id: string; path: string; from: number; to: number; snippet: string };
 
-const SIMPLE = /^(qa|chat|dq)-(\d+)$/;
+const SIMPLE = /^(qa|chat|dq|perf)-(\d+)$/;
 const CODE = /^code:([^:]+):(\d+)(?:-(\d+))?$/;
 
 export function parseRef(ref: string): ParsedRef | null {
   if (ref === "spec") return { kind: "spec", id: "spec" };
   const m = SIMPLE.exec(ref);
-  if (m) return { kind: m[1] as "qa" | "chat" | "dq", id: ref };
+  if (m) return { kind: m[1] as "qa" | "chat" | "dq" | "perf", id: ref };
   const c = CODE.exec(ref);
   if (c) {
     const from = Number(c[2]);
@@ -50,6 +52,10 @@ export function resolveRef(s: Session, ref: string): ResolvedEvidence | null {
       const d = s.review.items.find((x) => x.id === p.id);
       return d ? { kind: "dq", id: d.id, question: d.question, answer: d.answer } : null;
     }
+    case "perf": {
+      const r = (s.build.perf ?? []).find((x) => x.id === p.id);
+      return r ? { kind: "perf", id: r.id, at: r.at, label: r.label, metrics: r.metrics } : null;
+    }
     case "code": {
       const content = findFile(s.build.files, p.path);
       if (content === undefined) return null;
@@ -79,6 +85,7 @@ export function listRefIds(s: Session): string[] {
   const ids: string[] = s.clarify.spec.text.trim() ? ["spec"] : [];
   ids.push(...s.clarify.qa.map((q) => q.id));
   ids.push(...s.build.chat.map((c) => c.id));
+  ids.push(...(s.build.perf ?? []).map((r) => r.id));
   ids.push(...s.review.items.map((d) => d.id));
   for (const [path, content] of Object.entries(s.build.files)) {
     const n = content.split("\n").length;

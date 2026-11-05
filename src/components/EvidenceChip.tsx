@@ -9,7 +9,7 @@ export function EvidenceChip({ refId, onOpen }: { refId: string; onOpen: (ref: s
         font: "inherit",
         fontSize: "0.85em",
         fontWeight: 600,
-        color: "var(--pink)",
+        color: "var(--accent)",
         background: "none",
         border: 0,
         padding: "0 2px",

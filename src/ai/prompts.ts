@@ -1,5 +1,7 @@
-import type { Task } from "../task/bannerSchedule";
-import type { ReviewItem, Session } from "../session/types";
+import type { Task } from "../task";
+import { summarize } from "../perf/metrics";
+import { diffText, lineDiff } from "../session/lineDiff";
+import type { ReviewItem, Session, AppliedEdit } from "../session/types";
 import { listRefIds } from "../session/evidence";
 
 const FILE_BUDGET = 40_000;
@@ -48,10 +50,12 @@ function renderFiles(files: Record<string, string>): string {
 
 export function assistantSystem(files: Record<string, string>): string {
   return [
-    "당신은 지원자의 AI 코딩 도우미입니다. 지원자는 React 과제를 풀고 있습니다.",
-    "지원자가 요청한 것에 답하되, 코드를 줄 때는 어떤 파일의 어디를 바꾸는지 명확히 적습니다.",
+    "당신은 지원자의 AI 코딩 도우미입니다. 지원자는 React 과제를 풀고 있습니다. 당신은 지원자의 에디터 파일을 직접 고칠 수 있습니다.",
+    "지원자가 코드를 고치거나 만들어 달라고 하면 edits에 바꿀 파일마다 { path, content }를 넣습니다. content는 그 파일의 **전체 내용**입니다(일부만 넣으면 나머지가 지워집니다). path는 /src/ 아래 .js, .jsx, .css 파일만 됩니다. 새 파일도 만들 수 있습니다.",
+    "설명이나 비교만 원하면 edits는 빈 배열로 둡니다. 시키지 않은 파일은 건드리지 않습니다.",
+    "reply에는 무엇을 왜 바꿨는지 짧게 적습니다. 코드를 reply에 다시 붙이지 않습니다(이미 에디터에 들어갑니다).",
     "요구사항을 대신 정하지 않습니다. 결정이 필요한 지점은 '이건 어떻게 할지 정해 주세요'라고 되묻습니다.",
-    "한국어로 답합니다. 코드 블록은 ```jsx 로 감쌉니다.",
+    "한국어로 답합니다. 출력은 JSON { reply, edits } 입니다.",
     "",
     "현재 지원자의 파일:",
     renderFiles(truncateFiles(files)),
@@ -63,9 +67,41 @@ function renderQa(s: Session): string {
   return s.clarify.qa.map((q) => `[${q.id}] Q: ${q.question}\n      A: ${q.answer}`).join("\n");
 }
 
+export function editNote(edits?: AppliedEdit[]): string {
+  if (!edits?.length) return "";
+  return ` (에디터에 직접 적용: ${edits.map((e) => `${e.path}${e.reverted ? " → 지원자가 되돌림" : ""}`).join(", ")})`;
+}
+
 function renderChat(s: Session): string {
   if (s.build.chat.length === 0) return "(도우미를 쓰지 않음)";
-  return s.build.chat.map((c) => `[${c.id}] ${c.role === "user" ? "지원자" : "도우미"}: ${c.text}`).join("\n");
+  return s.build.chat
+    .map((c) => `[${c.id}] ${c.role === "user" ? "지원자" : "도우미"}: ${c.text}${c.images?.length ? ` (화면 캡처 ${c.images.length}장 첨부)` : ""}${editNote(c.edits)}`)
+    .join("\n");
+}
+
+/**
+ * 도우미가 에디터에 직접 쓴 코드와, 그 뒤 지원자가 제출할 때까지 손댄 정도.
+ * 파일마다 도우미가 마지막으로 적용한(되돌리지 않은) 버전과 제출본을 비교한다.
+ */
+export function renderAiEdits(s: Session): string {
+  const last = new Map<string, { chatId: string; after: string }>();
+  for (const c of s.build.chat) for (const e of c.edits ?? []) if (!e.reverted) last.set(e.path, { chatId: c.id, after: e.after });
+  if (last.size === 0) return "(도우미가 에디터를 직접 고친 적 없음)";
+  return [...last.entries()]
+    .map(([path, { chatId, after }]) => {
+      const submitted = s.build.files[path];
+      if (submitted === undefined) return `- ${path} [${chatId}]: 제출본에 없음(지원자가 지움)`;
+      const d = lineDiff(after, submitted);
+      if (d.added === 0 && d.removed === 0) return `- ${path} [${chatId}]: 도우미가 쓴 그대로 제출(지원자 수정 없음)`;
+      return `- ${path} [${chatId}]: 도우미가 쓴 뒤 지원자가 직접 수정 +${d.added} -${d.removed}\n${diffText(d, 40)}`;
+    })
+    .join("\n");
+}
+
+function renderPerf(s: Session): string {
+  const perf = s.build.perf ?? [];
+  if (perf.length === 0) return "(측정 기록 없음)";
+  return perf.map((r) => `[${r.id}] ${r.label} (${r.at}): ${summarize(r.metrics)}`).join("\n");
 }
 
 function renderCode(s: Session): string {
@@ -88,13 +124,17 @@ const REF_RULES = [
 
 export function designQuestionsPrompt(s: Session, task: Task): { system: string; user: string } {
   const system = [
-    "당신은 코드 리뷰 면접관입니다. 지원자가 AI와 주고받은 기록과 제출한 코드를 읽고, 이 지원자에게만 맞는 질문 3개를 만듭니다. 기록이 다르면 질문도 달라야 합니다.",
+    "당신은 지원자의 결정에 일부러 반박하는 깐깐한 코드 리뷰 면접관입니다. 지원자가 AI와 주고받은 기록과 제출한 코드를 읽고, 이 지원자에게만 맞는 질문 3개를 만듭니다. 기록이 다르면 질문도 달라야 합니다.",
+    "이 질의의 목적은 '왜 그렇게 했는가'에 대한 판단력을 보는 것입니다. 모든 질문은 반박으로 시작합니다: 지원자가 고른 방법의 구체적인 단점이나 위험(서비스 조건—기기, 트래픽, API 제한, 사용자층—에 비추어)을 먼저 짚고, 그럼에도 왜 그 방법을 골랐는지, 어떤 대안과 비교했는지를 묻습니다.",
+    "칭찬하거나 요약하는 문장으로 시작하지 않습니다. '~하셨는데, 그러면 ~한 문제가 생기지 않나요? 그래도 이걸 고른 이유는?' 형태를 기본으로 합니다.",
     "",
     "질문 3개의 종류(kind)와 순서:",
     "1. ai_direction: 지원자가 AI 도우미에게 내린 지시나 받아들인 답을 하나 골라, '왜 그렇게 시켰는지 / 왜 그 답을 그대로 썼는지(또는 고쳤는지)'를 묻는다. 도우미 대화가 없으면 실무진에게 한 질문 중 하나를 골라 왜 그걸 물었고 답을 코드에 어떻게 반영했는지 묻는다.",
-    "2. design: 코드에서 지원자가 내린 설계 결정(겹침 규칙, 시간대 비교, 상태 구조, 폴백 등) 하나를 짚어 그 코드 위치를 근거로 달고 '이 기준을 고른 이유와 다른 선택지'를 묻는다.",
-    "3. extend: 이 지원자의 현재 코드 구조를 전제로, 요구가 하나 늘었을 때(예: A/B 테스트, 국가 추가, 동시 수정) 어디를 어떻게 바꿀지 묻는다. 그 사람의 코드에서 실제로 바뀌어야 할 부분을 언급한다.",
+    "2. design: 코드에서 지원자가 내린 설계 결정(데이터를 받는 단위, 요청 빈도 제어, 응답 순서 처리, 렌더 범위, 상태 구조, 에러·빈 상태 등) 하나를 짚어 그 코드 위치를 근거로 달고, 그 결정의 약점을 들이민 뒤 '그래도 이걸 고른 이유와 버린 대안'을 묻는다.",
+    "3. extend: 이 지원자의 현재 코드 구조를 전제로, 요구나 조건이 하나 바뀌었을 때(과제의 확장 시나리오를 참고: 데이터 규모 증가, 트래픽 급증, 새 필터 등) 어디를 어떻게 바꿀지 묻는다. 그 사람의 코드에서 실제로 바뀌어야 할 부분을 언급한다.",
     "",
+    "도우미가 에디터에 직접 적용한 코드가 있으면 ai_direction 질문은 그 변경을 짚는다. 지원자가 그대로 제출했다면 그 코드의 약점을 들이밀며 왜 검토 없이 받아들였는지, 직접 고쳤다면 무엇을 왜 고쳤는지 반박해 묻는다. AI로 코드를 짠 것 자체는 문제 삼지 않는다. 판단과 검증을 본다.",
+    "성능 측정 기록이 있으면 세 질문 중 하나는 그 수치(개선 전후)를 근거로 달고, 무엇이 그 수치를 바꿨는지 코드와 연결해 설명하게 묻는다. 측정 기록이 없으면 하나는 '성능을 어떻게 확인했는지'를 묻는다.",
     "질문은 한국어 1~2문장이고, 기록의 구체적인 표현이나 코드 식별자를 인용해 '당신의 기록을 읽었다'는 게 드러나야 합니다. 각 질문에 근거 id를 1개 이상 답니다.",
     REF_RULES,
     "출력은 JSON { questions: [{ kind, question, evidence: [...] }, …3개] } 입니다.",
@@ -110,6 +150,14 @@ export function designQuestionsPrompt(s: Session, task: Task): { system: string;
     "AI 도우미 대화 (지원자가 AI에게 시킨 것과 받은 답):",
     renderChat(s),
     "",
+    "도우미가 에디터에 직접 쓴 코드와 이후 지원자의 수정:",
+    renderAiEdits(s),
+    "",
+    "성능 측정 기록 (지원자가 성능 패널에서 남긴 수치. 기록이 여러 개면 개선 전후 비교일 수 있다):",
+    renderPerf(s),
+    "",
+    `확장 시나리오: ${task.extensionScenario}`,
+    "",
     "제출 코드:",
     renderCode(s),
     "",
@@ -122,8 +170,10 @@ export function designQuestionsPrompt(s: Session, task: Task): { system: string;
 export function followUpPrompt(item: ReviewItem, s: Session): { system: string; user: string } {
   const system = [
     "당신은 면접관입니다. 지원자의 답변이 구체적인지 판단합니다.",
-    "답변이 '코드의 어느 부분이 어떻게 동작하는지' 또는 '왜 그렇게 정했는지'를 말하지 못하고 일반론에 머물면 ambiguous=true 로 보고, 그 빈 곳을 콕 집는 꼬리질문 1개를 한국어 한 문장으로 만듭니다.",
-    "답변이 구체적이면 ambiguous=false 이고 followUp은 비웁니다.",
+    "기본은 의심입니다. 답변이 아래 세 가지를 모두 갖춰야 ambiguous=false 입니다: (1) 코드의 구체적인 위치나 식별자를 짚어 어떻게 동작하는지 말한다, (2) 질문이 짚은 단점이나 위험을 인정하고 그 대가를 감수한 이유를 말한다, (3) 버린 대안과 비교해 서비스 조건(기기, 트래픽, API 제한, 사용자층, 일정)으로 판단 근거를 댄다.",
+    "하나라도 빠졌거나, 용어만 나열했거나, '좋아서', '깔끔해서'처럼 이유가 취향에 머물거나, 코드와 어긋나면 ambiguous=true 입니다.",
+    "꼬리질문은 반박입니다. 답변의 가장 약한 지점을 골라 '그렇게 하면 ~는 어떻게 되나요?'처럼 반례나 실패 상황을 들이미는 한국어 한 문장으로 만듭니다.",
+    "ambiguous=false 이면 followUp은 비웁니다.",
     "출력은 JSON { ambiguous: boolean, followUp?: string } 입니다.",
   ].join("\n");
   const user = [
@@ -138,21 +188,26 @@ export function followUpPrompt(item: ReviewItem, s: Session): { system: string; 
 
 const COMPETENCY_DEFS = [
   "requirements (요구사항 구체화): 실무진 질문이 모호한 지점(규모, 환경, 기한, 세부 동작)을 겨냥했는가, 답을 코드에 반영했는가, 정해지지 않은 것을 스스로 정했는가.",
-  "implementation (구현 품질): 체크리스트 통과, 코드 구조.",
-  "ai_usage (AI 활용): 도우미에게 무엇을 맡기고 무엇을 검증했는가, 답을 그대로 붙였는가.",
-  "understanding (구조 이해): 설명 질문 답변이 코드와 일치하고 이유를 말하는가.",
+  "implementation (구현 품질): 체크리스트 통과, 코드 구조, 서비스 조건(기기, 트래픽, API 제한)에 맞는 성능. 성능 측정 기록이 있으면 개선 전후 수치를 근거로 쓴다.",
+  "ai_usage (AI 활용): AI로 코드를 짠 것 자체는 감점하지 않는다. 무엇을 어떤 조건으로 맡겼는지, 받은 코드를 검토해 문제를 찾고 다시 시키거나 직접 고쳤는지(도우미가 쓴 버전과 제출본의 차이로 확인), 리팩토링했는지를 본다. 도우미 코드를 수정 없이 그대로 제출했고 설계 질의에서 그 코드의 약점을 설명하지 못하면 2점 이하.",
+  "understanding (판단 근거): 가장 무겁게 보는 역량. 고른 방법의 단점을 스스로 알고, 버린 대안과 비교해 서비스 조건으로 '왜'를 설명하는가. 답이 코드와 일치하는가. 반박 질문에 단점을 부정하거나 취향으로 답하면 2점 이하.",
   "extension (확장 설계): 확장 질문 답변이 현재 구조의 어느 부분을 바꾸는지 짚는가.",
 ];
 
 export function reportPrompt(s: Session, task: Task): { system: string; user: string } {
   const system = [
-    "당신은 채용 평가 리포트를 쓰는 시니어 프론트엔드 면접관입니다. 아래 기록만 근거로 역량 5개를 1~5점으로 매기고, 각 점수의 근거 id를 답니다.",
-    "점수 기준: 1 근거 없음 또는 반대 근거, 2 미흡, 3 보통, 4 좋음, 5 매우 좋음.",
+    "당신은 깐깐한 시니어 프론트엔드 면접관입니다. 아래 기록만 근거로 역량 5개를 1~5점으로 매기고, 각 점수의 근거 id를 답니다.",
+    "기본 태도는 의심입니다. 지원자에게 유리하게 해석하지 말고, 기록으로 확인되지 않으면 없는 것으로 봅니다. 그럴듯한 용어를 썼다고 이해했다고 보지 않습니다.",
+    "점수 기준(엄격): 1 근거 없음 또는 반대 근거, 2 일부만 했거나 설명이 일반론, 3 요구를 충족하지만 평범함(대부분의 지원자는 여기), 4 서비스 조건과 연결한 판단이 기록과 코드 양쪽에서 확인됨, 5 4를 넘어 다른 지원자와 확실히 구별되는 판단이 여러 근거로 확인됨(드묾).",
+    "3점에서 시작해 근거가 있을 때만 올리고, 약점이 하나라도 있으면 4를 넘기지 않습니다. 5점은 정말 예외적일 때만 줍니다.",
+    "다음은 반드시 감점합니다: 꼬리질문이 필요했던 첫 답(모호함), 코드와 어긋나는 설명, 도우미가 준 코드를 확인 없이 그대로 붙인 흔적(도우미 답의 코드와 제출 코드가 거의 같은데 되묻거나 수정한 기록이 없음), 성능을 고쳤다면서 측정 기록이 없는 경우.",
+    "rationale에는 잘한 점만 쓰지 말고, 점수를 더 주지 않은 이유(부족한 점)를 반드시 한 문장 이상 씁니다.",
     "역량 정의:",
     ...COMPETENCY_DEFS.map((d) => `- ${d}`),
     "",
-    "리포트의 목적은 'AI로 구현만 한 사람'과 '구조를 이해한 사람'을 구분하는 것입니다. 설명 질문 답변이 코드와 어긋나거나 일반론이면 understanding 점수를 낮게 줍니다.",
-    "rationale은 한국어 2~3문장이며, 문장 안에 근거 id를 대괄호로 인용합니다. 예: \"겹침 규칙을 등록일 기준으로 정했고[code:src/Home.jsx:15-16] 질문도 그 지점을 겨냥했다[qa-2].\"",
+    "리포트의 목적은 'AI로 구현만 한 사람'과 '왜 그렇게 했는지 판단할 줄 아는 사람'을 구분하는 것입니다. 판단 근거(understanding)를 가장 무겁게 봅니다. 구현이 좋아도 '왜'를 설명하지 못하면 그 사실을 highlights와 interviewQuestions에서 먼저 다룹니다.",
+    "interviewQuestions는 칭찬이 아니라 반박입니다. 지원자의 결정 중 가장 약한 지점을 골라 그 대가와 대안을 캐묻는 질문으로 씁니다.",
+    "rationale은 한국어 2~3문장이며, 문장 안에 근거 id를 대괄호로 인용합니다. 예: \"검색 요청을 300ms 디바운스로 묶었고[code:src/VideoList.jsx:15-22] 개선 전후 차단 시간이 줄었다[perf-1][perf-2].\"",
     "checklist는 주어진 항목 5개를 순서대로 코드로 점검해 passed와 근거를 적습니다.",
     "interviewQuestions는 면접관이 실제 면접에서 물을 후속 질문 3개입니다.",
     "highlights는 이 지원자가 특히 고민했거나 설계한 지점 2~4개입니다. 다른 지원자와 구별되는 것만 고릅니다: AI에게 무엇을 시키고 무엇을 직접 했는지, 어떤 결정을 왜 내렸는지, 어디서 막혔고 어떻게 풀었는지. 각 항목은 title(짧은 제목), detail(2문장, 근거 id 대괄호 인용), evidence[]입니다.",
@@ -180,6 +235,12 @@ export function reportPrompt(s: Session, task: Task): { system: string; user: st
     "",
     "AI 도우미 대화:",
     renderChat(s),
+    "",
+    "도우미가 에디터에 직접 쓴 코드와 이후 지원자의 수정:",
+    renderAiEdits(s),
+    "",
+    "성능 측정 기록:",
+    renderPerf(s),
     "",
     "제출 코드:",
     renderCode(s),

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { App as AntApp } from "antd";
@@ -45,4 +45,32 @@ test("while the answer is being judged, the card stays active and says so", asyn
   const first = screen.getByText("첫 질문").closest("section")!;
   expect(first).toHaveAttribute("aria-current", "step");
   expect(screen.getByText("둘째 질문").closest("section")).not.toHaveAttribute("aria-current");
+});
+
+test("after the last answer, nothing is generated until 최종 제출 is pressed", async () => {
+  judge.mockResolvedValue({ ambiguous: false });
+  const { generateReport } = await import("../ai");
+  let s = createSession("a", "2026-11-04T00:00:00.000Z");
+  s = reduce(s, { type: "build/submit", at: "2026-11-04T00:00:00.000Z" });
+  s = reduce(s, {
+    type: "review/setItems",
+    items: [{ id: "dq-1", kind: "design", question: "하나뿐인 질문", evidence: [] }],
+  });
+  render(
+    <MemoryRouter initialEntries={["/review"]}>
+      <AntApp>
+        <SessionProvider initial={s}>
+          <ReviewPage />
+        </SessionProvider>
+      </AntApp>
+    </MemoryRouter>,
+  );
+  await userEvent.type(screen.getByLabelText("1번 답변"), "generation ref로 늦은 응답을 버립니다.");
+  await userEvent.click(screen.getByRole("button", { name: "답변 저장" }));
+  const final = await screen.findByRole("button", { name: "최종 제출" });
+  expect(generateReport).not.toHaveBeenCalled();
+  await userEvent.click(final);
+  const dialog = await screen.findByRole("dialog");
+  await userEvent.click(within(dialog).getByRole("button", { name: "최종 제출" }));
+  expect(generateReport).toHaveBeenCalledTimes(1);
 });

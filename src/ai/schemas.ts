@@ -10,6 +10,28 @@ export const designQuestionsSchema = z.object({
     .length(3),
 });
 
+/** 도우미 응답: 설명과, 에디터에 바로 적용할 파일 전체 내용 */
+export const assistantReplySchema = z.object({
+  reply: z.string().min(1),
+  edits: z.array(z.object({ path: z.string().min(1), content: z.string() })).default([]),
+});
+
+export const assistantReplyJsonSchema = {
+  type: "object",
+  properties: {
+    reply: { type: "string" },
+    edits: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { path: { type: "string" }, content: { type: "string" } },
+        required: ["path", "content"],
+      },
+    },
+  },
+  required: ["reply", "edits"],
+};
+
 export const followUpSchema = z.object({
   ambiguous: z.boolean(),
   followUp: z.string().optional(),
